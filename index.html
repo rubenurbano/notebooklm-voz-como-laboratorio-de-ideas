@@ -1,0 +1,1636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NotebookLM como laboratorio de ideas — Tutorial V001</title>
+<meta name="description" content="Tutorial completo para grabar la voz, descubrir conexiones y convertir reflexiones en conocimiento útil con NotebookLM.">
+<style>
+/* ================= VARIABLES ================= */
+:root{
+  --fs:16px;
+  --bg:#0a0e1a; --card:#0f172a; --blue:#1e3a5f; --text:#e2e8f0; --muted:#94a3b8;
+  --accent:#38bdf8; --accent2:#7dd3fc; --border:#1e3a5f; --bg2:#0d1424; --code-bg:#0b1220;
+  --nav-h:58px; --radius:12px;
+}
+body.light{
+  --bg:#f8fafc; --card:#ffffff; --blue:#cbd5e1; --text:#0f172a; --muted:#475569;
+  --accent:#0284c7; --accent2:#0ea5e9; --border:#e2e8f0; --bg2:#f1f5f9; --code-bg:#f1f5f9;
+}
+*{box-sizing:border-box}
+html{font-size:var(--fs);scroll-behavior:smooth}
+body{
+  margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.65;padding-top:var(--nav-h);
+  transition:background .25s,color .25s;overflow-x:hidden;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+h1,h2,h3,h4{line-height:1.25;margin:0 0 .6em}
+h1{font-size:clamp(1.6rem,4vw,2.4rem)}
+h2{font-size:clamp(1.3rem,3vw,1.8rem);color:var(--accent);border-bottom:1px solid var(--border);padding-bottom:.35em}
+h3{font-size:clamp(1.1rem,2.4vw,1.35rem);color:var(--accent2);margin-top:1.4em}
+h4{font-size:1.05rem}
+p{margin:.6em 0}
+ul,ol{margin:.6em 0;padding-left:1.4em}
+li{margin:.3em 0}
+code{background:var(--code-bg);padding:.12em .4em;border-radius:5px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+pre{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px;overflow:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86rem;line-height:1.55;white-space:pre-wrap;word-wrap:break-word;margin:0}
+hr{border:none;border-top:1px solid var(--border);margin:1.6em 0}
+
+/* ================= LAYOUT ================= */
+main{max-width:960px;margin:0 auto;padding:24px 18px 80px}
+.tab{display:none;animation:fade .3s ease}
+.tab.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin:14px 0}
+.callout{border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card));padding:14px 16px;border-radius:0 10px 10px 0;margin:14px 0}
+.callout.warn{border-left-color:#f59e0b;background:color-mix(in srgb,#f59e0b 8%,var(--card))}
+.callout.ok{border-left-color:#22c55e;background:color-mix(in srgb,#22c55e 8%,var(--card))}
+.tag{display:inline-block;background:var(--blue);color:var(--text);font-size:.75rem;padding:.15em .6em;border-radius:999px;margin-right:.4em}
+
+/* ================= NAV ================= */
+#nav{
+  position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:40;
+  display:flex;align-items:center;gap:8px;padding:0 10px;
+  background:color-mix(in srgb,var(--card) 92%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--border);
+}
+#progress{position:absolute;bottom:0;left:0;right:0;height:3px;background:var(--bg2)}
+#progressFill{height:100%;width:0;background:var(--accent);transition:width .08s linear}
+.chip{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-height:42px;padding:0 12px;border-radius:999px;
+  border:1px solid var(--border);background:transparent;color:var(--text);
+  font-size:.82rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:background .15s,border-color .15s,color .15s;font-family:inherit;
+}
+.chip:hover{background:color-mix(in srgb,var(--accent) 12%,transparent);border-color:var(--accent)}
+.chip.on{background:color-mix(in srgb,var(--accent) 20%,transparent);border-color:var(--accent);color:var(--accent)}
+.index-btn{flex:0 0 auto}
+#chips{display:flex;gap:6px;overflow-x:auto;flex:1;padding:2px 0;scrollbar-width:none}
+#chips::-webkit-scrollbar{display:none}
+.tools{display:flex;gap:4px;flex:0 0 auto}
+.tool{
+  width:34px;height:34px;border-radius:8px;border:1px solid var(--border);
+  background:transparent;color:var(--text);cursor:pointer;font-size:.95rem;
+  display:grid;place-items:center;font-family:inherit;
+}
+.tool:hover{background:color-mix(in srgb,var(--accent) 15%,transparent);border-color:var(--accent)}
+.tool:focus-visible,.chip:focus-visible,a:focus-visible,button:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;
+}
+@media(max-width:600px){
+  .tool{width:30px;height:30px;font-size:.85rem}
+  .chip{min-height:40px;font-size:.76rem;padding:0 9px}
+}
+
+/* ================= DRAWER ================= */
+#dr{
+  position:fixed;top:var(--nav-h);left:0;bottom:0;
+  width:min(330px,88vw);background:var(--card);
+  border-right:1px solid var(--border);
+  transform:translateX(-105%);transition:transform .25s ease;
+  z-index:35;overflow:auto;padding:10px;
+}
+#dr.o{transform:none;box-shadow:8px 0 24px #0008}
+#dr a{
+  display:flex;align-items:center;padding:12px;border-radius:8px;
+  color:var(--text);cursor:pointer;min-height:44px;font-size:.92rem;
+  border:none;background:transparent;width:100%;text-align:left;font-family:inherit;
+}
+#dr a:hover{background:color-mix(in srgb,var(--accent) 10%,transparent);text-decoration:none}
+#dr a.on{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);font-weight:600}
+#dr::before{content:"Índice";display:block;font-weight:700;color:var(--muted);font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;padding:6px 10px 12px}
+
+/* ================= HOME ================= */
+.hero{display:grid;grid-template-columns:1fr;gap:18px;align-items:center;margin-bottom:22px}
+@media(min-width:720px){.hero{grid-template-columns:1.1fr 1fr}}
+.hero-svg-wrap{width:100%;max-width:380px;margin:0 auto;border-radius:16px;overflow:hidden;border:1px solid var(--border);background:#05070f}
+.hero-svg-wrap svg{display:block;width:100%;height:auto}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;
+  border-radius:10px;border:1px solid var(--accent);background:transparent;
+  color:var(--accent);font-weight:600;cursor:pointer;font-family:inherit;font-size:.95rem;
+}
+.btn-secondary:hover{background:color-mix(in srgb,var(--accent) 15%,transparent)}
+
+/* ================= DETAILS ================= */
+details{background:var(--card);border:1px solid var(--border);border-radius:10px;margin:10px 0;overflow:hidden}
+details[open]{border-color:var(--accent)}
+summary{
+  padding:14px 16px;cursor:pointer;font-weight:600;list-style:none;
+  display:flex;justify-content:space-between;gap:12px;align-items:center;min-height:48px;
+}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"＋";color:var(--accent);font-weight:700;flex:0 0 auto}
+details[open] summary::after{content:"−"}
+details .body{padding:0 16px 16px;border-top:1px solid var(--border);padding-top:12px}
+
+/* ================= COPY ================= */
+.copy-wrap{position:relative;margin:12px 0}
+.copy-btn{
+  position:absolute;top:8px;right:8px;z-index:2;
+  background:var(--accent);color:#04121e;border:none;border-radius:6px;
+  padding:6px 10px;font-size:.72rem;font-weight:700;cursor:pointer;letter-spacing:.04em;
+  font-family:inherit;
+}
+.copy-btn:hover{filter:brightness(1.1)}
+
+/* ================= TABLES ================= */
+.table-wrap{overflow-x:auto;margin:14px 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:520px;font-size:.9rem}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+th{background:var(--bg2);color:var(--accent2);font-weight:700}
+tr:last-child td{border-bottom:none}
+
+/* ================= CHECKLIST ================= */
+.checklist label{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--border);cursor:pointer}
+.checklist label:last-child{border-bottom:none}
+.checklist input{width:20px;height:20px;accent-color:var(--accent);margin-top:2px;flex:0 0 auto}
+
+/* ================= SEARCH ================= */
+#searchPanel{position:fixed;inset:0;background:#000a;z-index:70;display:none;padding:60px 16px 16px;backdrop-filter:blur(4px)}
+#searchPanel.o{display:block}
+.search-box{max-width:640px;margin:0 auto;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;max-height:80vh;display:flex;flex-direction:column}
+#searchInput{width:100%;padding:12px 44px 12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:1rem;font-family:inherit}
+#searchClose{position:absolute;right:26px;top:74px;background:transparent;border:none;color:var(--muted);font-size:1.2rem;cursor:pointer;width:34px;height:34px;border-radius:8px}
+#searchClose:hover{background:var(--bg2);color:var(--text)}
+#searchResults{margin-top:12px;overflow:auto}
+#searchResults a{display:block;padding:10px 12px;border-radius:8px;color:var(--text);border-bottom:1px solid var(--border)}
+#searchResults a:hover{background:var(--bg2);text-decoration:none}
+#searchResults .sr-title{color:var(--accent);font-weight:700;font-size:.92rem}
+#searchResults .sr-snip{color:var(--muted);font-size:.82rem;margin-top:2px}
+#searchResults .empty{color:var(--muted);padding:16px;text-align:center}
+
+/* ================= BACK TOP ================= */
+#backtop{
+  position:fixed;right:16px;bottom:16px;width:46px;height:46px;border-radius:50%;
+  background:var(--accent);color:#04121e;border:none;font-size:1.2rem;font-weight:700;
+  cursor:pointer;z-index:30;display:none;place-items:center;box-shadow:0 6px 18px #0006;
+}
+#backtop.o{display:grid}
+
+/* ================= SVG HERO ================= */
+.hs{display:block;width:100%;height:auto}
+.hs .spin{animation:hs-spin 26s linear infinite;transform-box:view-box;transform-origin:200px 250px}
+@keyframes hs-spin{to{transform:rotate(360deg)}}
+.hs .ring1{animation:hs-r1 3.6s ease-in-out infinite;transform-box:view-box;transform-origin:200px 240px}
+.hs .ring2{animation:hs-r2 3.6s ease-in-out infinite .6s;transform-box:view-box;transform-origin:200px 240px}
+.hs .ring3{animation:hs-r3 3.6s ease-in-out infinite 1.2s;transform-box:view-box;transform-origin:200px 240px}
+@keyframes hs-r1{0%,100%{opacity:.12;transform:scale(.85)}50%{opacity:.55;transform:scale(1.08)}}
+@keyframes hs-r2{0%,100%{opacity:.18;transform:scale(.9)}50%{opacity:.6;transform:scale(1.06)}}
+@keyframes hs-r3{0%,100%{opacity:.28;transform:scale(.94)}50%{opacity:.7;transform:scale(1.04)}}
+.hs .eq{transform-box:fill-box;transform-origin:center bottom;animation:hs-eq 1.2s ease-in-out infinite}
+.hs .eq:nth-child(2){animation-delay:.15s}.hs .eq:nth-child(3){animation-delay:.3s}
+.hs .eq:nth-child(4){animation-delay:.45s}.hs .eq:nth-child(5){animation-delay:.6s}
+.hs .eq:nth-child(6){animation-delay:.75s}.hs .eq:nth-child(7){animation-delay:.9s}
+.hs .eq:nth-child(8){animation-delay:1.05s}
+@keyframes hs-eq{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.hs .wv{animation:hs-wv 3s ease-in-out infinite}
+.hs .wv:nth-child(2){animation-delay:.5s}.hs .wv:nth-child(3){animation-delay:1s}.hs .wv:nth-child(4){animation-delay:1.5s}
+@keyframes hs-wv{0%,100%{opacity:.12}50%{opacity:.7}}
+.hs .c1{animation:hs-f1 7s ease-in-out infinite}
+.hs .c2{animation:hs-f2 8s ease-in-out infinite .8s}
+.hs .c3{animation:hs-f3 9s ease-in-out infinite 1.6s}
+.hs .c4{animation:hs-f1 8.5s ease-in-out infinite 2.2s}
+@keyframes hs-f1{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes hs-f2{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes hs-f3{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.hs .pt{animation:hs-pt 6s ease-in-out infinite}
+.hs .pt:nth-child(2){animation-delay:1s}.hs .pt:nth-child(3){animation-delay:2s}
+.hs .pt:nth-child(4){animation-delay:3s}.hs .pt:nth-child(5){animation-delay:4s}
+@keyframes hs-pt{0%{opacity:0;transform:translateY(10px)}30%{opacity:.9}70%{opacity:.9}100%{opacity:0;transform:translateY(-30px)}}
+@media(prefers-reduced-motion:reduce){.hs *{animation:none!important}}
+
+/* ================= PRINT ================= */
+@media print{
+  @page{size:A4 portrait;margin:14mm 12mm}
+  :root{--bg:#fff;--card:#fff;--text:#000;--muted:#333;--accent:#0369a1;--border:#bbb;--bg2:#f4f4f4;--code-bg:#f4f4f4}
+  body{background:#fff!important;color:#000!important;padding-top:0}
+  #nav,#dr,#backtop,#searchPanel,#progress,.copy-btn{display:none!important}
+  main{max-width:100%;padding:0}
+  .tab{display:block!important;page-break-inside:auto}
+  .tab+.tab{margin-top:18px}
+  h1,h2,h3{color:#000!important}
+  h2{border-bottom:1px solid #999}
+  .card,.callout,details,pre,.table-wrap{border:1px solid #bbb!important;background:#fff!important;break-inside:avoid}
+  details:not([open])>.body{display:block!important}
+  pre{white-space:pre-wrap;word-wrap:break-word;font-size:.8rem}
+  table{min-width:0}
+  .hero-svg-wrap{max-width:280px;margin:0 auto 12px}
+  a{color:#000!important;text-decoration:underline}
+}
+</style>
+</head>
+<body>
+
+<!-- PROGRESO -->
+<div id="progress"><div id="progressFill"></div></div>
+
+<!-- NAV -->
+<nav id="nav" aria-label="Navegación principal">
+  <button class="chip index-btn" id="mb" aria-label="Abrir índice" aria-expanded="false" aria-controls="dr">☰ Índice</button>
+  <div id="chips" role="tablist" aria-label="Secciones">
+    <button class="chip" data-go="0" role="tab">INICIO</button>
+    <button class="chip" data-go="1" role="tab">CONCEPTOS</button>
+    <button class="chip" data-go="2" role="tab">PROCEDIMIENTO</button>
+    <button class="chip" data-go="3" role="tab">PRÁCTICA</button>
+    <button class="chip" data-go="4" role="tab">33 Preguntas (Q&amp;A)</button>
+    <button class="chip" data-go="5" role="tab">ERRORES</button>
+    <button class="chip" data-go="6" role="tab">RESUMEN</button>
+    <button class="chip" data-go="7" role="tab">FUENTES</button>
+    <button class="chip" data-go="8" role="tab">CRÉDITOS</button>
+  </div>
+  <div class="tools">
+    <button class="tool" id="searchBtn" aria-label="Buscar en el tutorial">🔍</button>
+    <button class="tool" id="fontDec" aria-label="Reducir tamaño de letra">A−</button>
+    <button class="tool" id="fontInc" aria-label="Aumentar tamaño de letra">A+</button>
+    <button class="tool" id="themeBtn" aria-label="Cambiar tema">🌙</button>
+    <button class="tool" id="printBtn" aria-label="Imprimir o guardar como PDF">🖨</button>
+  </div>
+</nav>
+
+<!-- DRAWER -->
+<div id="dr" role="navigation" aria-label="Índice de secciones"></div>
+
+<!-- BUSCADOR -->
+<div id="searchPanel" role="dialog" aria-modal="true" aria-label="Buscar en el tutorial">
+  <div class="search-box">
+    <input id="searchInput" type="search" placeholder="Buscar en el tutorial…" aria-label="Texto a buscar" autocomplete="off">
+    <button id="searchClose" aria-label="Cerrar búsqueda">✕</button>
+    <div id="searchResults"></div>
+  </div>
+</div>
+
+<!-- =================== SVG TEMPLATE =================== -->
+<div id="svgSource" style="display:none" aria-hidden="true">
+<svg id="svgTemplate" class="hs" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Micrófono central que emite ondas de voz y las transforma en tarjetas de ideas conectadas por una red luminosa: la voz convertida en conocimiento organizado">
+  <defs>
+    <radialGradient id="bg__UID__" cx="50%" cy="42%" r="72%">
+      <stop offset="0%" stop-color="#132444"/>
+      <stop offset="50%" stop-color="#0a0e1a"/>
+      <stop offset="100%" stop-color="#05070f"/>
+    </radialGradient>
+    <radialGradient id="halo__UID__" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity=".35"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mic__UID__" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a5e7ff"/>
+      <stop offset="55%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+    <linearGradient id="cardg__UID__" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2f4d"/>
+      <stop offset="100%" stop-color="#0d1626"/>
+    </linearGradient>
+    <filter id="glow__UID__" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <rect width="400" height="500" fill="url(#bg__UID__)"/>
+  <circle cx="200" cy="245" r="155" fill="url(#halo__UID__)"/>
+  <g stroke="#38bdf8" stroke-opacity=".10" stroke-width="1">
+    <line x1="0" y1="390" x2="400" y2="390"/>
+    <line x1="0" y1="415" x2="400" y2="415"/>
+    <line x1="0" y1="440" x2="400" y2="440"/>
+    <line x1="0" y1="465" x2="400" y2="465"/>
+    <line x1="0" y1="490" x2="400" y2="490"/>
+    <line x1="50" y1="380" x2="0" y2="500"/>
+    <line x1="120" y1="380" x2="60" y2="500"/>
+    <line x1="200" y1="380" x2="200" y2="500"/>
+    <line x1="280" y1="380" x2="340" y2="500"/>
+    <line x1="350" y1="380" x2="400" y2="500"/>
+  </g>
+  <circle class="ring1" cx="200" cy="240" r="118" fill="none" stroke="#38bdf8" stroke-width="1.2"/>
+  <circle class="ring2" cx="200" cy="240" r="92" fill="none" stroke="#7dd3fc" stroke-width="1.2"/>
+  <circle class="ring3" cx="200" cy="240" r="66" fill="none" stroke="#a5e7ff" stroke-width="1.2"/>
+  <g class="spin">
+    <circle cx="200" cy="122" r="2.5" fill="#a5e7ff"/>
+    <circle cx="318" cy="240" r="2" fill="#38bdf8"/>
+    <circle cx="82" cy="240" r="2" fill="#7dd3fc"/>
+    <circle cx="200" cy="358" r="2.5" fill="#38bdf8"/>
+  </g>
+  <g filter="url(#glow__UID__)">
+    <rect x="183" y="200" width="34" height="58" rx="17" fill="url(#mic__UID__)"/>
+    <g stroke="#0a0e1a" stroke-opacity=".45" stroke-width="1">
+      <line x1="190" y1="210" x2="210" y2="210"/>
+      <line x1="188" y1="217" x2="212" y2="217"/>
+      <line x1="188" y1="224" x2="212" y2="224"/>
+      <line x1="188" y1="231" x2="212" y2="231"/>
+      <line x1="189" y1="238" x2="211" y2="238"/>
+      <line x1="191" y1="245" x2="209" y2="245"/>
+    </g>
+    <path d="M170 238 Q170 278 200 278 Q230 278 230 238" fill="none" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/>
+    <line x1="200" y1="278" x2="200" y2="298" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/>
+    <line x1="184" y1="298" x2="216" y2="298" stroke="#7dd3fc" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  <g>
+    <rect class="eq" x="128" y="215" width="5" height="34" rx="2.5" fill="#38bdf8"/>
+    <rect class="eq" x="140" y="205" width="5" height="54" rx="2.5" fill="#7dd3fc"/>
+    <rect class="eq" x="152" y="196" width="5" height="72" rx="2.5" fill="#a5e7ff"/>
+    <rect class="eq" x="164" y="208" width="5" height="48" rx="2.5" fill="#7dd3fc"/>
+    <rect class="eq" x="231" y="208" width="5" height="48" rx="2.5" fill="#7dd3fc"/>
+    <rect class="eq" x="243" y="196" width="5" height="72" rx="2.5" fill="#a5e7ff"/>
+    <rect class="eq" x="255" y="205" width="5" height="54" rx="2.5" fill="#7dd3fc"/>
+    <rect class="eq" x="267" y="215" width="5" height="34" rx="2.5" fill="#38bdf8"/>
+  </g>
+  <g fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round">
+    <path class="wv" d="M115 240 Q115 200 155 200" opacity=".4"/>
+    <path class="wv" d="M100 240 Q100 185 152 185" opacity=".3"/>
+    <path class="wv" d="M285 240 Q285 200 245 200" opacity=".4"/>
+    <path class="wv" d="M300 240 Q300 185 248 185" opacity=".3"/>
+  </g>
+  <g class="c1">
+    <rect x="30" y="130" width="82" height="52" rx="8" fill="url(#cardg__UID__)" stroke="#1e3a5f"/>
+    <line x1="42" y1="146" x2="100" y2="146" stroke="#38bdf8" stroke-width="2" stroke-opacity=".8"/>
+    <line x1="42" y1="155" x2="94" y2="155" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".5"/>
+    <line x1="42" y1="163" x2="84" y2="163" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".35"/>
+    <line x1="42" y1="171" x2="90" y2="171" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".3"/>
+  </g>
+  <g class="c2">
+    <rect x="288" y="110" width="82" height="52" rx="8" fill="url(#cardg__UID__)" stroke="#1e3a5f"/>
+    <line x1="300" y1="126" x2="356" y2="126" stroke="#38bdf8" stroke-width="2" stroke-opacity=".8"/>
+    <line x1="300" y1="135" x2="350" y2="135" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".5"/>
+    <line x1="300" y1="143" x2="340" y2="143" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".35"/>
+  </g>
+  <g class="c3">
+    <rect x="24" y="330" width="82" height="52" rx="8" fill="url(#cardg__UID__)" stroke="#1e3a5f"/>
+    <line x1="36" y1="346" x2="94" y2="346" stroke="#7dd3fc" stroke-width="2" stroke-opacity=".8"/>
+    <line x1="36" y1="355" x2="88" y2="355" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".5"/>
+    <line x1="36" y1="363" x2="78" y2="363" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".35"/>
+  </g>
+  <g class="c4">
+    <rect x="292" y="330" width="82" height="52" rx="8" fill="url(#cardg__UID__)" stroke="#1e3a5f"/>
+    <line x1="304" y1="346" x2="360" y2="346" stroke="#7dd3fc" stroke-width="2" stroke-opacity=".8"/>
+    <line x1="304" y1="355" x2="354" y2="355" stroke="#94a3b8" stroke-width="1.5" stroke-opacity=".5"/>
+  </g>
+  <g stroke="#38bdf8" stroke-opacity=".35" stroke-width="1" stroke-dasharray="3 4" fill="none">
+    <path d="M112 156 Q150 170 178 210"/>
+    <path d="M288 136 Q250 160 222 210"/>
+    <path d="M106 356 Q150 320 180 280"/>
+    <path d="M294 356 Q250 320 220 280"/>
+    <path d="M112 156 Q250 60 288 136"/>
+  </g>
+  <g fill="#a5e7ff">
+    <circle r="2.5"><animateMotion dur="3.2s" repeatCount="indefinite" path="M112 156 Q150 170 178 210"/></circle>
+    <circle r="2"><animateMotion dur="4s" repeatCount="indefinite" path="M288 136 Q250 160 222 210"/></circle>
+    <circle r="2"><animateMotion dur="3.8s" repeatCount="indefinite" path="M106 356 Q150 320 180 280"/></circle>
+  </g>
+  <g fill="#7dd3fc">
+    <circle class="pt" cx="70" cy="240" r="1.5"/>
+    <circle class="pt" cx="330" cy="240" r="1.5"/>
+    <circle class="pt" cx="200" cy="80" r="1.5"/>
+    <circle class="pt" cx="150" cy="400" r="1.5"/>
+    <circle class="pt" cx="250" cy="400" r="1.5"/>
+  </g>
+</svg>
+</div>
+
+<!-- =================== MAIN =================== -->
+<main id="main">
+
+<!-- ====== INICIO ====== -->
+<section class="tab active" id="inicio" data-t="HOME">
+  <div class="hero">
+    <div>
+      <h1>NotebookLM como laboratorio de ideas</h1>
+      <p><strong>Tutorial completo para grabar la voz, descubrir conexiones y convertir reflexiones en conocimiento útil.</strong></p>
+      <p>por <strong>Rubén Sbarsky</strong></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
+        <button class="btn-secondary" id="ix">☰ Ver índice</button>
+      </div>
+    </div>
+    <div class="hero-svg-wrap" id="svgHome"></div>
+  </div>
+
+  <div class="callout">
+    <strong>Objetivo de esta guía:</strong> aprender a utilizar la grabación de voz de NotebookLM como una herramienta para pensar mejor, investigar preguntas, detectar oportunidades, diseñar experimentos y desarrollar proyectos. No es un manual para grabar reuniones: es un método práctico para transformar el pensamiento hablado en trabajo intelectual organizado.
+  </div>
+
+  <h2>1. Qué vamos a construir</h2>
+  <p>Imagina que, mientras caminas, estudias, tocas el piano o visitas un pueblo, se te ocurre una idea interesante. Si no la registras, quizá la olvides. Si solo la grabas, tendrás un archivo de voz más. Pero si conviertes esa reflexión en preguntas, hipótesis, pruebas y decisiones, puedes iniciar un proceso de aprendizaje.</p>
+  <p>Este tutorial enseña a crear ese proceso. El ciclo básico será:</p>
+  <div class="card" style="text-align:center;font-weight:700;color:var(--accent);letter-spacing:.02em">
+    HABLAR → TRANSCRIBIR → ANALIZAR → CONTRASTAR → EXPERIMENTAR → REGISTRAR LO APRENDIDO
+  </div>
+  <p>La grabación es el punto de partida, no el resultado final. La inteligencia artificial puede ayudarte a organizar y examinar lo que dices, pero no sustituye tu criterio ni verifica automáticamente que una idea sea verdadera.</p>
+
+  <h3>Qué aprenderás</h3>
+  <ul>
+    <li>Preparar un cuaderno de NotebookLM para un tema concreto.</li>
+    <li>Grabar reflexiones habladas y utilizarlas como fuente de trabajo, cuando la función esté disponible en tu versión.</li>
+    <li>Convertir una conversación desordenada en preguntas investigables.</li>
+    <li>Encontrar supuestos, contradicciones y conexiones entre ideas.</li>
+    <li>Distinguir hechos, opiniones, hipótesis y especulaciones.</li>
+    <li>Utilizar la voz para estudiar ciencia, filosofía, música y tecnología.</li>
+    <li>Inventariar recursos y generar oportunidades prácticas.</li>
+    <li>Diseñar experimentos pequeños y de bajo coste.</li>
+    <li>Crear un archivo de aprendizaje que mejore con el tiempo.</li>
+    <li>Evaluar si una propuesta de IA está respaldada por pruebas.</li>
+  </ul>
+
+  <h3>Para quién está pensado</h3>
+  <p>Para personas que nunca han utilizado NotebookLM, no tienen conocimientos técnicos y quieren aprender paso a paso. No hace falta saber programar ni tener experiencia en investigación.</p>
+</section>
+
+<!-- ====== CONCEPTOS ====== -->
+<section class="tab" id="conceptos" data-t="Conceptos">
+  <h2>2. Qué es NotebookLM y qué aporta la grabación de voz</h2>
+  <p>NotebookLM es una herramienta de Google para trabajar con fuentes de información dentro de cuadernos. Según las funciones disponibles en tu cuenta y dispositivo, puedes añadir materiales, hacer preguntas sobre ellos y generar resultados basados en esas fuentes.</p>
+  <p>La función de grabación de voz descrita en esta guía permite registrar una intervención hablada y convertirla en una fuente textual que luego puede analizarse en el cuaderno. La disponibilidad, los límites de duración, los controles y la ubicación exacta de los botones pueden cambiar según la versión, el país, la cuenta o el dispositivo.</p>
+  <div class="callout warn"><strong>No des por supuesto que todos los usuarios ven exactamente la misma interfaz.</strong> Si un botón no aparece, consulta la ayuda oficial de NotebookLM y comprueba que tienes acceso a la función.</div>
+  <p>Enlace oficial de ayuda: <a href="https://support.google.com/notebooklm/" target="_blank" rel="noopener">https://support.google.com/notebooklm/</a></p>
+
+  <h3>¿Qué cambia cuando la voz se convierte en una fuente?</h3>
+  <p>Una grabación corriente conserva lo que dijiste, pero obliga a volver a escucharla para encontrar un detalle. Una transcripción permite buscar palabras, identificar temas, comparar afirmaciones y pedir a la IA que organice el contenido.</p>
+  <p>Por ejemplo, puedes grabar:</p>
+  <blockquote class="card">«Me gustaría vivir en un pueblo pequeño. No quiero empezar preguntando qué servicios faltan. Quiero averiguar qué recursos existen, cuáles están infrautilizados y qué combinaciones podrían hacer viable mi vida allí».</blockquote>
+  <p>La transcripción puede convertirse en el material de partida para elaborar un inventario de recursos, un conjunto de preguntas y un plan de comprobación.</p>
+
+  <h3>Qué no debes suponer</h3>
+  <ul>
+    <li>Que la IA comprende perfectamente todos los nombres propios, términos técnicos o palabras pronunciadas con ruido.</li>
+    <li>Que una transcripción conserva todos los matices de la voz, las pausas o la intención.</li>
+    <li>Que una idea mencionada durante la grabación se convierte automáticamente en un hecho.</li>
+    <li>Que NotebookLM investiga por su cuenta todas las afirmaciones que aparecen en la grabación.</li>
+    <li>Que todas las funciones, límites y opciones son idénticos en todas las cuentas.</li>
+    <li>Que una grabación queda guardada como archivo de audio descargable. Comprueba qué formato conserva la función concreta que utilizas.</li>
+  </ul>
+
+  <h2>3. Antes de empezar: conceptos y precauciones</h2>
+
+  <h3>3.1. Diferencia entre hecho, hipótesis y posibilidad</h3>
+  <p>Esta distinción es esencial.</p>
+  <ul>
+    <li><strong>Hecho respaldado:</strong> una afirmación sustentada por una fuente fiable o por una observación verificable.</li>
+    <li><strong>Observación personal:</strong> algo que has visto, oído o experimentado. Puede ser correcto, pero a veces necesita corroboración.</li>
+    <li><strong>Hipótesis:</strong> una explicación o afirmación que todavía debe ponerse a prueba.</li>
+    <li><strong>Posibilidad:</strong> una idea que podría funcionar, pero cuya viabilidad aún no se ha demostrado.</li>
+    <li><strong>Preferencia:</strong> algo que deseas o valoras. No necesita demostración científica, aunque sí puede influir en una decisión.</li>
+  </ul>
+  <p>Ejemplo:</p>
+  <ul>
+    <li><strong>Observación:</strong> «He visto una parcela sin cultivar».</li>
+    <li><strong>Hipótesis:</strong> «Quizá se podría utilizar para producir alimentos».</li>
+    <li><strong>Pregunta de verificación:</strong> «¿Quién es el propietario y qué uso permite la normativa?».</li>
+    <li><strong>Conclusión válida:</strong> todavía no sabemos si la parcela está disponible.</li>
+  </ul>
+  <p>Una IA útil debe conservar estas diferencias en lugar de convertirlas en afirmaciones seguras.</p>
+
+  <h3>3.2. La grabación no tiene que ser perfecta</h3>
+  <p>No prepares un discurso. Habla como si explicaras el asunto a una persona curiosa. Las repeticiones, las dudas y los cambios de dirección pueden contener información útil.</p>
+  <p>Sin embargo, una sesión demasiado dispersa resulta difícil de analizar. Al principio, dedica cada grabación a una pregunta principal.</p>
+
+  <h3>3.3. No necesitas hablar durante una hora</h3>
+  <p>Para empezar, cinco a diez minutos suelen ser suficientes. Una sesión breve es más fácil de revisar, corregir y convertir en una acción concreta.</p>
+
+  <h3>3.4. No grabes datos sensibles sin necesidad</h3>
+  <p>Evita incluir contraseñas, datos bancarios, números de documentos, información médica íntima o detalles privados de otras personas. Si grabas a alguien más, solicita su consentimiento cuando corresponda y respeta las normas aplicables.</p>
+
+  <h2>Glosario</h2>
+  <dl class="card">
+    <dt><strong>Cuaderno:</strong></dt><dd>espacio de NotebookLM donde se agrupan fuentes y consultas sobre un tema.</dd>
+    <dt><strong>Fuente:</strong></dt><dd>material que se añade para consultar o analizar, como una transcripción, documento o página compatible.</dd>
+    <dt><strong>Transcripción:</strong></dt><dd>representación textual de lo que se dijo durante una grabación.</dd>
+    <dt><strong>Hipótesis:</strong></dt><dd>explicación o afirmación que debe ponerse a prueba.</dd>
+    <dt><strong>Supuesto:</strong></dt><dd>idea que se acepta provisionalmente sin haberla demostrado.</dd>
+    <dt><strong>Inferencia:</strong></dt><dd>conclusión que se obtiene a partir de observaciones o premisas.</dd>
+    <dt><strong>Contraejemplo:</strong></dt><dd>caso que muestra que una afirmación general no se cumple siempre.</dd>
+    <dt><strong>Experimento:</strong></dt><dd>procedimiento diseñado para observar un resultado y evaluar una hipótesis.</dd>
+    <dt><strong>Criterio de éxito:</strong></dt><dd>condición definida de antemano que permite evaluar el resultado de una prueba.</dd>
+    <dt><strong>Sesgo de confirmación:</strong></dt><dd>tendencia a prestar más atención a la información que apoya nuestras creencias que a la que las cuestiona.</dd>
+    <dt><strong>Fuente primaria:</strong></dt><dd>material original o evidencia directa pertinente para una investigación.</dd>
+    <dt><strong>Trazabilidad:</strong></dt><dd>posibilidad de identificar de dónde procede una afirmación o decisión.</dd>
+    <dt><strong>Iteración:</strong></dt><dd>repetición de un proceso utilizando lo aprendido en la ronda anterior.</dd>
+    <dt><strong>Viabilidad:</strong></dt><dd>posibilidad de llevar a cabo una propuesta considerando sus recursos, costes, restricciones y riesgos.</dd>
+  </dl>
+</section>
+
+<!-- ====== PROCEDIMIENTO ====== -->
+<section class="tab" id="procedimiento" data-t="Procedimiento">
+  <h2>4. Preparación inicial</h2>
+  <p>Los nombres de los botones pueden cambiar. Sigue el objetivo de cada paso, no solo el nombre literal de una opción.</p>
+
+  <h3>Paso 1. Accede a NotebookLM</h3>
+  <ol>
+    <li>Abre el sitio oficial: <a href="https://notebooklm.google.com/" target="_blank" rel="noopener">https://notebooklm.google.com/</a></li>
+    <li>Inicia sesión con la cuenta que quieras utilizar.</li>
+    <li>Comprueba que estás en el espacio de NotebookLM y no en otra aplicación de Google.</li>
+    <li>Revisa la ayuda oficial si la interfaz no coincide con estas instrucciones.</li>
+  </ol>
+
+  <h3>Paso 2. Crea un cuaderno para un tema concreto</h3>
+  <p>Crea un cuaderno nuevo y utiliza un nombre específico. Por ejemplo: «Laboratorio de ideas», «Física y conciencia», «Armonía y composición», «Recursos de pueblos pequeños», «Aprender herramientas de IA». No mezcles todo en un solo cuaderno desde el principio. La separación por temas facilita encontrar las fuentes y formular preguntas precisas.</p>
+
+  <h3>Paso 3. Define el propósito del cuaderno</h3>
+  <p>Escribe una breve nota de trabajo, por ejemplo:</p>
+  <blockquote class="card">«Este cuaderno reúne mis reflexiones habladas sobre recursos de pueblos pequeños. Quiero identificar oportunidades, distinguir hipótesis de hechos, investigar los requisitos legales y técnicos y diseñar pruebas de bajo coste. No quiero que se presenten posibilidades como si estuvieran demostradas».</blockquote>
+
+  <h3>Paso 4. Localiza la función de grabación</h3>
+  <p>Busca la opción de grabación de voz en la interfaz disponible en tu cuenta. Si aparece, lee las indicaciones de la propia aplicación y comprueba si permite iniciar, pausar, terminar y utilizar la transcripción como fuente.</p>
+  <p>Si no aparece:</p>
+  <ol>
+    <li>Comprueba si la función está disponible para tu cuenta y dispositivo.</li>
+    <li>Actualiza la aplicación o prueba la versión web, si procede.</li>
+    <li>Consulta la ayuda oficial.</li>
+    <li>No confundas la ausencia del botón con un error tuyo: las funciones pueden desplegarse gradualmente.</li>
+  </ol>
+  <p>Como alternativa, puedes grabar con una herramienta de voz que tengas disponible, transcribir el contenido y añadir el texto como fuente, siempre respetando la privacidad y las condiciones de los servicios utilizados.</p>
+
+  <h3>Paso 5. Prepara una pregunta principal</h3>
+  <p>Antes de grabar, completa esta frase:</p>
+  <p><strong>«Quiero pensar en voz alta sobre ______ para descubrir ______».</strong></p>
+  <ul>
+    <li>«Quiero pensar en voz alta sobre una progresión armónica para descubrir cómo podría desarrollarla».</li>
+    <li>«Quiero pensar en voz alta sobre la vida en pueblos pequeños para descubrir recursos infrautilizados».</li>
+    <li>«Quiero pensar en voz alta sobre la conciencia para identificar qué parte de mi pregunta es científica y qué parte es filosófica».</li>
+    <li>«Quiero pensar en voz alta sobre una herramienta de IA para detectar qué aspectos todavía no comprendo».</li>
+  </ul>
+
+  <h2>5. Primer ejercicio: tu primera grabación útil</h2>
+  <p><strong>Objetivo:</strong> convertir una reflexión espontánea de cinco minutos en un conjunto de preguntas y una acción.</p>
+  <ol>
+    <li><strong>Elige un tema.</strong> Utiliza este ejemplo: «¿Cómo podría aprovechar mejor mi tiempo de aprendizaje?».</li>
+    <li><strong>Graba sin leer un guion.</strong> Habla durante unos cinco minutos respondiendo espontáneamente: ¿Qué quiero aprender? ¿Por qué me interesa? ¿Qué me cuesta? ¿Qué he probado? ¿Qué me gustaría conseguir? ¿Qué no sé todavía? No hace falta contestarlas todas ni corregir cada frase.</li>
+    <li><strong>Finaliza y revisa la transcripción.</strong> Corrige nombres propios, términos técnicos, cifras, negaciones y palabras que cambian el significado. Si una frase quedó mal transcrita, no permitas que el análisis posterior dependa de ella.</li>
+    <li><strong>Pide un análisis inicial</strong> con la instrucción del bloque siguiente.</li>
+    <li><strong>Examina la respuesta.</strong> ¿Reconoces tus ideas? ¿Ha inventado una intención? ¿Ha confundido una posibilidad con un hecho? ¿Ha omitido algo importante? ¿La acción propuesta es realizable?</li>
+    <li><strong>Elige una sola acción.</strong> Una lista de veinte tareas no es necesariamente mejor que una sola tarea bien elegida.</li>
+    <li><strong>Cierra el ciclo.</strong> Tras la acción, graba una segunda reflexión breve: ¿Qué hice? ¿Qué descubrí? ¿Qué salió diferente? ¿Qué necesito averiguar ahora?</li>
+  </ol>
+
+  <pre>Analiza la transcripción de esta grabación. No la resumas únicamente. Identifica: 1) las ideas principales, 2) las dudas que expreso, 3) los supuestos que doy por ciertos, 4) las preguntas que merecen investigación y 5) una acción pequeña que pueda realizar hoy. Distingue claramente lo que he dicho de tus propias inferencias. No inventes información.</pre>
+
+  <h2>6. El método universal en seis etapas</h2>
+  <p>Este método se puede utilizar con prácticamente cualquier tema.</p>
+
+  <h3>Etapa 1. Capturar</h3>
+  <p>Graba una reflexión centrada en una pregunta. Busca un lugar relativamente silencioso, habla a un ritmo natural, explica los términos poco conocidos, di cuándo estás recordando un hecho y cuándo estás especulando, si no sabes algo dilo expresamente y evita incluir información confidencial.</p>
+
+  <h3>Etapa 2. Extraer</h3>
+  <p>Solicita que se identifiquen los componentes de la reflexión: ideas principales, observaciones, preguntas, hipótesis, preferencias, restricciones, contradicciones posibles y decisiones pendientes. No pidas todavía una solución definitiva. Primero conviene comprender el material.</p>
+
+  <h3>Etapa 3. Interrogar</h3>
+  <p>Pide una revisión crítica. Preguntas útiles: ¿Qué estoy dando por supuesto? ¿Qué podría estar interpretando mal? ¿Qué explicación alternativa existe? ¿Qué información me falta? ¿Qué prueba podría demostrar que mi hipótesis es incorrecta? ¿Qué parte de mi razonamiento es más débil? El objetivo no es que la IA te contradiga por sistema, sino que te ayude a detectar problemas reales.</p>
+
+  <h3>Etapa 4. Contrastar</h3>
+  <p>Añade fuentes relevantes al cuaderno: documentación oficial, artículos científicos, manuales, normativa, datos públicos o documentos propios. Después, pide que cada afirmación importante se clasifique como:</p>
+  <ol>
+    <li>Respaldada por una fuente.</li>
+    <li>Contradicha por una fuente.</li>
+    <li>No resuelta con las fuentes disponibles.</li>
+    <li>Inferencia que necesita validación.</li>
+    <li>Opinión o preferencia personal.</li>
+  </ol>
+  <p>Comprueba las referencias importantes directamente. Una cita puede estar mal interpretada, desactualizada o no demostrar exactamente lo que se afirma.</p>
+
+  <h3>Etapa 5. Experimentar</h3>
+  <p>Convierte la idea más prometedora en una prueba pequeña. Una buena prueba define: qué quieres averiguar, qué vas a hacer, qué recursos necesitas, cuánto tiempo y dinero puede costar, qué resultado observarás, qué resultado apoyaría la hipótesis y qué resultado obligaría a descartarla o modificarla.</p>
+  <p>Ejemplo: si crees que un tutorial mejora cuando se basa en las dificultades reales de un principiante, prepara una explicación corta, pide a alguien que la siga y registra dónde se atasca. No necesitas escribir un manual entero para probar la idea.</p>
+
+  <h3>Etapa 6. Registrar</h3>
+  <p>Al terminar, deja constancia de: qué hipótesis probaste, qué hiciste, qué ocurrió, qué aprendiste, qué sigue sin saberse y cuál será el siguiente paso. No confíes únicamente en la memoria ni en el historial del chat. Mantén un registro explícito de los resultados.</p>
+
+  <h2>7. Cómo formular buenas instrucciones para la IA</h2>
+  <p>La calidad de la respuesta depende en parte de cómo definas la tarea.</p>
+
+  <h3>Una instrucción débil</h3>
+  <blockquote class="card">«Analiza esta grabación y dime qué te parece».</blockquote>
+  <p>Es demasiado general. La respuesta puede ser un resumen superficial o una lista de consejos genéricos.</p>
+
+  <h3>Una instrucción mejor</h3>
+  <blockquote class="card">«Analiza la transcripción e identifica las tres hipótesis principales, los supuestos que las sostienen y las pruebas necesarias para evaluarlas. Separa los hechos respaldados por las fuentes de las inferencias. Termina con una prueba pequeña que pueda realizarse en menos de una hora».</blockquote>
+  <p>La segunda instrucción define un resultado concreto.</p>
+
+  <h3>La estructura de un buen prompt</h3>
+  <ol>
+    <li><strong>Rol:</strong> qué tipo de análisis necesitas.</li>
+    <li><strong>Material:</strong> qué transcripción o fuentes debe examinar.</li>
+    <li><strong>Objetivo:</strong> qué quieres descubrir.</li>
+    <li><strong>Procedimiento:</strong> qué pasos debe seguir.</li>
+    <li><strong>Formato:</strong> tabla, lista, informe o plan.</li>
+    <li><strong>Límites:</strong> qué no debe inventar ni asumir.</li>
+    <li><strong>Criterio de calidad:</strong> cómo sabrás si la respuesta es útil.</li>
+    <li><strong>Siguiente acción:</strong> qué debe recomendar al terminar.</li>
+  </ol>
+
+  <h3>Prompt para detectar ideas ocultas</h3>
+  <pre>Analiza la transcripción de la grabación disponible en este cuaderno.
+
+No te limites a resumirla.
+
+Identifica:
+1. Las ideas principales.
+2. Las conexiones que el hablante sugiere, aunque no las desarrolle.
+3. Los supuestos no demostrados.
+4. Las contradicciones reales o posibles.
+5. Las preguntas que merecen investigación.
+6. Las ideas que podrían convertirse en experimentos.
+7. Las afirmaciones que requieren fuentes externas.
+
+Distingue lo que aparece explícitamente en la transcripción de tus inferencias.
+No inventes intenciones del hablante ni presentes especulaciones como hechos.
+
+Termina seleccionando tres ideas prometedoras y proponiendo una prueba concreta para cada una.</pre>
+
+  <h3>Prompt para el abogado del diablo</h3>
+  <pre>Examina críticamente la hipótesis principal de esta transcripción.
+
+Primero, formula la hipótesis de la manera más clara y justa posible.
+Después, identifica sus premisas, sus puntos fuertes y sus puntos débiles.
+Busca explicaciones alternativas, contraejemplos y condiciones en las que podría fallar.
+Indica qué pruebas serían necesarias para evaluarla.
+No inventes refutaciones ni afirmes que una idea es falsa solo porque no esté demostrada.
+
+Termina con una evaluación provisional: qué sabemos, qué no sabemos y cuál sería la siguiente comprobación más útil.</pre>
+
+  <h3>Prompt para convertir una idea en un experimento</h3>
+  <pre>Selecciona la idea más prometedora de esta transcripción y conviértela en un experimento práctico.
+
+Incluye:
+- Pregunta que se quiere responder.
+- Hipótesis comprobable.
+- Recursos necesarios.
+- Procedimiento paso a paso.
+- Tiempo y coste aproximados, indicando las incertidumbres.
+- Resultado que apoyaría la hipótesis.
+- Resultado que la debilitaría.
+- Riesgos y permisos que deben comprobarse.
+- Forma de registrar los resultados.
+
+No inventes datos sobre costes, permisos ni disponibilidad de recursos.
+Si faltan datos, enumera cuáles son y cómo conseguirlos.</pre>
+
+  <h2>10. Cómo organizar los cuadernos y las fuentes</h2>
+
+  <h3>Una estructura sencilla</h3>
+  <p>Puedes crear un cuaderno por proyecto y mantener dentro de él fuentes de distintos tipos: transcripciones de reflexiones, documentación oficial, artículos y estudios, manuales, datos públicos, informes de pruebas, decisiones y próximos pasos. No todos los tipos de fuente estarán disponibles en todas las cuentas o formatos. Comprueba las opciones de importación de tu versión.</p>
+
+  <h3>Convención de nombres</h3>
+  <ul>
+    <li><code>2026-10-28 — Idea inicial sobre recursos</code></li>
+    <li><code>2026-10-29 — Hipótesis sobre conectividad</code></li>
+    <li><code>2026-10-30 — Resultado de la primera prueba</code></li>
+    <li><code>2026-10-31 — Preguntas pendientes</code></li>
+  </ul>
+
+  <h3>Registro de hipótesis</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Hipótesis</th><th>Evidencia actual</th><th>Qué falta</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>H01</td><td>Una combinación de recursos podría reducir un coste</td><td>Idea inicial</td><td>Datos de coste</td><td>Sin comprobar</td></tr>
+        <tr><td>H02</td><td>Una explicación con ejercicios mejora el aprendizaje</td><td>Prueba informal</td><td>Comparación con principiantes</td><td>En evaluación</td></tr>
+        <tr><td>H03</td><td>Una progresión puede adaptarse a varias tonalidades</td><td>Análisis musical</td><td>Práctica al piano</td><td>En prueba</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Estados recomendados: nueva, pendiente de investigación, en prueba, respaldada provisionalmente, refutada por la evidencia disponible, descartada por falta de viabilidad y requiere más datos. No utilices «demostrada» si el tipo de pregunta no permite una demostración o si la evidencia es insuficiente.</p>
+
+  <h3>Registro de decisiones</h3>
+  <p>Para decisiones importantes, anota: qué decisión tomaste, qué alternativas consideraste, qué información tenías, qué incertidumbres quedaban, qué resultado esperabas y cuándo revisarás la decisión. Esto permite aprender tanto de los aciertos como de los errores.</p>
+</section>
+
+<!-- ====== PRÁCTICA ====== -->
+<section class="tab" id="practica" data-t="Práctica">
+  <h2>8. Veinte usos creativos explicados paso a paso</h2>
+
+  <details><summary>Uso 1. Detector de ideas que aparecen espontáneamente</summary><div class="body">
+    <p><strong>Objetivo:</strong> descubrir qué ideas valiosas aparecen durante una reflexión libre.</p>
+    <p><strong>Cómo hacerlo:</strong></p>
+    <ol><li>Elige una pregunta amplia, pero concreta.</li><li>Graba entre cinco y diez minutos sin preparar un discurso.</li><li>Revisa la transcripción.</li><li>Pide que identifique ideas principales, conexiones inesperadas y preguntas implícitas.</li><li>Selecciona una idea que merezca desarrollarse.</li><li>Abre una nueva sesión dedicada exclusivamente a ella.</li></ol>
+    <p><strong>Ejemplo:</strong> empiezas hablando del coste de la vivienda y terminas relacionando el acceso a internet, las bibliotecas, los espacios públicos y el trabajo remoto.</p>
+    <p><strong>Resultado esperado:</strong> una lista de ideas para investigar, no una garantía de que sean correctas.</p>
+  </div></details>
+
+  <details><summary>Uso 2. Abogado del diablo personal</summary><div class="body">
+    <p><strong>Objetivo:</strong> comprobar si una idea resiste objeciones razonables.</p>
+    <ol><li>Graba una defensa de tu hipótesis.</li><li>Pide que la formule de manera precisa.</li><li>Solicita las cinco objeciones más fuertes.</li><li>Responde a cada objeción en una segunda grabación.</li><li>Pide que compare las respuestas y detecte qué cuestiones siguen abiertas.</li><li>Busca fuentes para las afirmaciones decisivas.</li></ol>
+    <p><strong>Consejo:</strong> no pidas solo argumentos en contra. Pide que se evalúen con el mismo rigor las pruebas favorables y desfavorables.</p>
+  </div></details>
+
+  <details><summary>Uso 3. Museo de errores y cambios de opinión</summary><div class="body">
+    <p><strong>Objetivo:</strong> aprender cómo cambian tus ideas.</p>
+    <ol><li>Graba qué pensabas sobre una cuestión.</li><li>Explica qué pruebas te hicieron cambiar o qué dudas aparecieron.</li><li>Guarda la transcripción con fecha y tema.</li><li>Cuando cambies de opinión, graba una nueva entrada.</li><li>Compara ambas versiones.</li><li>Identifica qué evidencia produjo el cambio y qué sigue sin resolverse.</li></ol>
+    <p><strong>Resultado:</strong> un registro de evolución intelectual. No debe utilizarse para etiquetarte psicológicamente ni para inferir rasgos personales que no estén respaldados.</p>
+  </div></details>
+
+  <details><summary>Uso 4. Generador de experimentos mentales</summary><div class="body">
+    <p><strong>Objetivo:</strong> explorar escenarios imaginarios con reglas claras.</p>
+    <ol><li>Describe el escenario.</li><li>Enumera las condiciones que se mantienen y las que cambian.</li><li>Pide que identifique consecuencias lógicas.</li><li>Separa las consecuencias necesarias de las especulativas.</li><li>Busca contradicciones.</li><li>Diseña variaciones del escenario para comprobar cómo cambian los resultados.</li></ol>
+    <p><strong>Ejemplo:</strong> imaginar una comunidad con abundante energía solar, pero con agua limitada. ¿Qué actividades serían posibles y cuáles seguirían siendo difíciles?</p>
+  </div></details>
+
+  <details><summary>Uso 5. Escáner verbal de recursos ocultos</summary><div class="body">
+    <p><strong>Objetivo:</strong> identificar recursos físicos, humanos, públicos y digitales que podrían aprovecharse.</p>
+    <ol><li>Describe lo que observas en un lugar.</li><li>Separa las observaciones de tus suposiciones.</li><li>Enumera recursos existentes y recursos infrautilizados.</li><li>Pide posibles usos alternativos.</li><li>Añade información oficial sobre propiedad, permisos, costes y disponibilidad.</li><li>Clasifica cada propuesta por viabilidad y evidencia pendiente.</li></ol>
+    <p><strong>Regla esencial:</strong> que algo parezca abandonado o infrautilizado no significa que esté disponible para usarlo.</p>
+  </div></details>
+
+  <details><summary>Uso 6. Caza de recursos de contribución pequeña</summary><div class="body">
+    <p><strong>Objetivo:</strong> evitar que se descarten oportunidades por parecer poco importantes.</p>
+    <ol><li>Elige un recurso concreto.</li><li>Graba todos los usos que se te ocurran.</li><li>Pide que se agrupen por tipo de beneficio.</li><li>Identifica combinaciones con otros recursos.</li><li>Estima qué datos hacen falta para evaluar cada posibilidad.</li><li>Prioriza según beneficio, coste, esfuerzo, legalidad y riesgo.</li></ol>
+    <p>No es necesario que cada recurso genere mucho valor por sí solo. Pero tampoco conviene invertir en una posibilidad cuyo coste supera sistemáticamente el beneficio.</p>
+  </div></details>
+
+  <details><summary>Uso 7. Ingeniería de combinaciones improbables</summary><div class="body">
+    <p><strong>Objetivo:</strong> descubrir capacidades nuevas al combinar recursos.</p>
+    <ol><li>Escoge dos o tres recursos de campos distintos.</li><li>Describe qué aporta cada uno.</li><li>Pide combinaciones posibles.</li><li>Exige una explicación del mecanismo por el que funcionaría cada combinación.</li><li>Identifica los requisitos que faltan.</li><li>Elige una combinación que pueda probarse a pequeña escala.</li></ol>
+    <p><strong>Ejemplo:</strong> conocimientos musicales + una herramienta de IA + una biblioteca de partituras propias podrían convertirse en un sistema personal de estudio y composición.</p>
+  </div></details>
+
+  <details><summary>Uso 8. Detective de oportunidades en pueblos pequeños</summary><div class="body">
+    <p><strong>Objetivo:</strong> generar hipótesis de actividades viables en municipios de baja población.</p>
+    <ol><li>Graba observaciones sobre servicios, instalaciones, actividades y necesidades.</li><li>Incorpora datos públicos actuales del municipio.</li><li>Pide una lista de oportunidades posibles.</li><li>Exige que distinga demanda demostrada de demanda supuesta.</li><li>Investiga competencia, normativa, costes y accesibilidad.</li><li>Habla con posibles usuarios o clientes antes de invertir.</li></ol>
+    <p><strong>Importante:</strong> una oportunidad no se valida porque la IA pueda describirla convincentemente. Se valida mediante datos y pruebas reales.</p>
+  </div></details>
+
+  <details><summary>Uso 9. Simulador de supervivencia económica</summary><div class="body">
+    <p><strong>Objetivo:</strong> estudiar cómo combinar recursos y gastos para hacer viable un modo de vida.</p>
+    <ol><li>Graba tus objetivos y restricciones.</li><li>Prepara una lista de gastos reales.</li><li>Identifica recursos que ya tienes.</li><li>Separa ahorros confirmados de ahorros hipotéticos.</li><li>Pide escenarios conservador, optimizado y experimental.</li><li>Comprueba los números con una hoja de cálculo y datos reales.</li></ol>
+    <p>No confundas una reducción de gastos con un ingreso. Tampoco presupongas que un servicio gratuito estará siempre disponible.</p>
+  </div></details>
+
+  <details><summary>Uso 10. Archivo oral de pueblos y conocimientos locales</summary><div class="body">
+    <p><strong>Objetivo:</strong> documentar experiencias, oficios, usos del territorio y transformaciones de una comunidad.</p>
+    <ol><li>Define qué quieres documentar.</li><li>Solicita permiso antes de grabar testimonios.</li><li>Explica cómo se utilizará el material.</li><li>Registra nombres, lugares y fechas solo cuando sea apropiado.</li><li>Contrasta los recuerdos con fuentes históricas cuando sea posible.</li><li>Identifica qué conocimientos podrían ser útiles para la comunidad.</li></ol>
+    <p>No publiques testimonios ni datos personales sin autorización adecuada. Un recuerdo puede ser valioso sin constituir una prueba histórica concluyente.</p>
+  </div></details>
+
+  <details><summary>Uso 11. Convertir intuiciones en preguntas científicas</summary><div class="body">
+    <p><strong>Objetivo:</strong> transformar una intuición en una pregunta que pueda investigarse.</p>
+    <ol><li>Graba la intuición sin intentar utilizar términos perfectos.</li><li>Pide que identifique el fenómeno que intentas comprender.</li><li>Formula una pregunta precisa.</li><li>Separa lo que la ciencia establece de lo que continúa abierto.</li><li>Consulta fuentes científicas fiables.</li><li>Anota qué parte de la intuición se mantiene y cuál necesita corregirse.</li></ol>
+  </div></details>
+
+  <details><summary>Uso 12. Interrogatorio sobre la conciencia</summary><div class="body">
+    <p><strong>Objetivo:</strong> organizar una reflexión filosófica sobre la experiencia subjetiva.</p>
+    <ol><li>Explica qué aspecto de la conciencia te intriga.</li><li>Pide que identifique tus afirmaciones y supuestos.</li><li>Compara varias posiciones filosóficas.</li><li>Distingue las cuestiones empíricas de las conceptuales.</li><li>Busca argumentos sólidos a favor y en contra.</li><li>Registra qué preguntas permanecen abiertas.</li></ol>
+    <p>No permitas que la IA presente como resuelto un problema filosófico solo porque produzca una explicación fluida.</p>
+  </div></details>
+
+  <details><summary>Uso 13. Laboratorio de paradojas</summary><div class="body">
+    <p><strong>Objetivo:</strong> comprender la estructura de una paradoja.</p>
+    <ol><li>Graba la paradoja con tus propias palabras.</li><li>Pide una formulación lógica y precisa.</li><li>Identifica los supuestos que producen el conflicto.</li><li>Examina posibles soluciones.</li><li>Busca fuentes académicas o especializadas.</li><li>Crea variaciones que permitan comprender qué cambia al modificar un supuesto.</li></ol>
+  </div></details>
+
+  <details><summary>Uso 14. Puente entre disciplinas</summary><div class="body">
+    <p><strong>Objetivo:</strong> descubrir analogías útiles entre campos distintos.</p>
+    <ol><li>Escoge dos disciplinas.</li><li>Graba qué semejanzas intuyes.</li><li>Pide ejemplos concretos de cada semejanza.</li><li>Solicita contraejemplos y límites de la analogía.</li><li>Identifica si existe una relación matemática real o solo una comparación conceptual.</li><li>Diseña un pequeño ejercicio para explorar la conexión.</li></ol>
+  </div></details>
+
+  <details><summary>Uso 15. Detector de preguntas mejores</summary><div class="body">
+    <p><strong>Objetivo:</strong> dedicar el tiempo a las preguntas que más aprendizaje pueden generar.</p>
+    <ol><li>Graba diez minutos de preguntas sin intentar responderlas.</li><li>Pide que las clasifique por tipo.</li><li>Elimina las repetidas.</li><li>Valora cada pregunta por importancia, investigabilidad y coste de respuesta.</li><li>Selecciona tres.</li><li>Formula una primera acción para cada una.</li></ol>
+    <p>Una pregunta interesante puede ser difícil de resolver. La prioridad dependerá de tus objetivos, no de una puntuación automática de la IA.</p>
+  </div></details>
+
+  <details><summary>Uso 16. Compositor que habla antes de tocar</summary><div class="body">
+    <p><strong>Objetivo:</strong> convertir una intención musical en un plan de composición.</p>
+    <ol><li>Describe la escena o emoción que quieres expresar.</li><li>Indica el instrumento, el nivel técnico y las restricciones.</li><li>Pide varias estrategias musicales posibles.</li><li>Solicita tonalidad, tempo, textura, recursos armónicos y desarrollo.</li><li>Prueba las propuestas en el instrumento.</li><li>Graba qué funciona y qué no.</li></ol>
+    <p>La IA no sabe qué tocaste realmente si no le proporcionas una transcripción, nombres de notas, acordes u otro material musical adecuado.</p>
+  </div></details>
+
+  <details><summary>Uso 17. Diario de descubrimientos armónicos</summary><div class="body">
+    <p><strong>Objetivo:</strong> construir un catálogo personal de recursos armónicos.</p>
+    <ol><li>Graba qué progresión has descubierto.</li><li>Di los acordes y las notas cuando los conozcas.</li><li>Explica qué sensación produce y por qué te interesa.</li><li>Pide análisis de funciones, notas comunes y conducción de voces.</li><li>Solicita ejercicios en otras tonalidades.</li><li>Comprueba todo al piano y registra tus observaciones.</li></ol>
+    <p>Si no conoces los acordes, registra la idea como una descripción provisional. No permitas que la IA invente una identificación musical precisa.</p>
+  </div></details>
+
+  <details><summary>Uso 18. Arquitecto de bandas sonoras</summary><div class="body">
+    <p><strong>Objetivo:</strong> convertir una escena narrativa en un mapa de decisiones musicales.</p>
+    <ol><li>Describe la escena.</li><li>Divídela en etapas emocionales.</li><li>Pide posibles tratamientos musicales para cada etapa.</li><li>Solicita alternativas contrastantes.</li><li>Selecciona una y prueba un motivo corto.</li><li>Graba qué efecto produce al escucharla.</li></ol>
+    <p>El objetivo no es aceptar una receta automática, sino ampliar el repertorio de opciones compositivas.</p>
+  </div></details>
+
+  <details><summary>Uso 19. Tutorial nacido de las dificultades reales</summary><div class="body">
+    <p><strong>Objetivo:</strong> crear materiales de aprendizaje basados en problemas experimentados.</p>
+    <ol><li>Graba tus dudas mientras aprendes una herramienta.</li><li>Registra qué pasos te resultan confusos.</li><li>Graba cómo resolviste cada dificultad.</li><li>Pide una estructura de tutorial para principiantes.</li><li>Contrasta los pasos con la documentación oficial.</li><li>Prueba el tutorial con una persona que no conozca la herramienta.</li></ol>
+    <p>Una explicación que te funciona a ti puede no ser suficiente para otra persona. La prueba con principiantes es una parte importante del proceso.</p>
+  </div></details>
+
+  <details><summary>Uso 20. Motor de proyectos</summary><div class="body">
+    <p><strong>Objetivo:</strong> transformar una reflexión amplia en un plan verificable.</p>
+    <ol><li>Graba objetivos, recursos, restricciones e ideas.</li><li>Pide un mapa del proyecto.</li><li>Solicita un inventario de oportunidades.</li><li>Crea un registro de incertidumbres.</li><li>Diseña experimentos de bajo coste.</li><li>Elabora un plan de acción con prioridades.</li><li>Registra decisiones y resultados.</li><li>Revisa el plan después de cada prueba.</li></ol>
+    <p>No asumas que la aplicación conserva automáticamente toda la historia del proyecto. Mantén una fuente explícita con decisiones, fechas, resultados y próximos pasos.</p>
+  </div></details>
+
+  <h2>9. Cinco proyectos prácticos completos</h2>
+
+  <details><summary>Proyecto A. Un laboratorio de recursos para un pueblo</summary><div class="body">
+    <p><strong>Objetivo:</strong> investigar cómo podrían combinarse recursos existentes en un pueblo para resolver una necesidad concreta.</p>
+    <p><strong>Materiales:</strong> cuaderno de NotebookLM, grabaciones de observaciones, datos oficiales del municipio, información sobre servicios, instalaciones y normativa, y una tabla para registrar hipótesis y comprobaciones.</p>
+    <ul>
+      <li><strong>Sesión 1: observación.</strong> Graba lo que ves, distinguiendo observaciones directas, información que te han contado, suposiciones y preguntas.</li>
+      <li><strong>Sesión 2: inventario.</strong> Pide una tabla con columnas: recurso, evidencia disponible, uso posible, requisitos pendientes y próxima comprobación.</li>
+      <li><strong>Sesión 3: combinaciones.</strong> Elige tres recursos y pide combinaciones posibles. Exige que la IA explique qué aporta cada elemento y qué impedimentos podrían existir.</li>
+      <li><strong>Sesión 4: validación.</strong> Comprueba propiedad, disponibilidad, normativa, coste y demanda de las opciones prometedoras.</li>
+      <li><strong>Sesión 5: prueba pequeña.</strong> Elige una propuesta que pueda comprobarse sin asumir compromisos importantes.</li>
+    </ul>
+    <p><strong>Criterio de éxito:</strong> no producir una lista enorme de ideas, sino identificar al menos una oportunidad con evidencia suficiente para justificar el siguiente paso.</p>
+  </div></details>
+
+  <details><summary>Proyecto B. Un cuaderno de preguntas sobre física y conciencia</summary><div class="body">
+    <p><strong>Objetivo:</strong> crear un archivo personal de preguntas y aprender a investigarlas con rigor.</p>
+    <ol><li>Graba una pregunta por sesión.</li><li>Pide una formulación precisa.</li><li>Identifica conceptos ambiguos.</li><li>Consulta fuentes fiables.</li><li>Separa conocimiento establecido, hipótesis y problemas abiertos.</li><li>Graba una explicación de lo que has aprendido.</li><li>Pide que se señalen posibles malentendidos.</li><li>Escribe una nueva pregunta derivada.</li></ol>
+    <p><strong>Ficha para cada pregunta:</strong> pregunta original, fecha, intuición inicial, conceptos que necesito comprender, fuentes consultadas, respuesta provisional, objeciones, aspectos aún desconocidos y próxima pregunta.</p>
+    <p><strong>Criterio de éxito:</strong> que cada sesión te permita formular una pregunta más precisa o comprender mejor una distinción importante.</p>
+  </div></details>
+
+  <details><summary>Proyecto C. Tu biblioteca de armonía y composición</summary><div class="body">
+    <p><strong>Objetivo:</strong> construir un catálogo de recursos musicales que puedas utilizar al piano.</p>
+    <ol><li>Graba una idea musical.</li><li>Identifica los acordes o aporta una transcripción.</li><li>Pide una explicación armónica.</li><li>Solicita tres variaciones.</li><li>Practica cada variación.</li><li>Graba qué diferencias percibes.</li><li>Guarda el resultado con un título descriptivo.</li></ol>
+    <p><strong>Ficha:</strong> nombre del recurso, progresión de acordes, tonalidad, notas comunes, conducción de voces, sensación buscada, variaciones, ejercicio de práctica y errores que debo evitar.</p>
+    <p><strong>Criterio de éxito:</strong> que puedas recuperar una idea, comprenderla y tocarla sin depender de volver a escuchar una conversación larga.</p>
+  </div></details>
+
+  <details><summary>Proyecto D. Aprender una herramienta de inteligencia artificial</summary><div class="body">
+    <p><strong>Objetivo:</strong> crear un tutorial a partir de la experiencia real de aprendizaje.</p>
+    <ol><li>Antes de empezar, graba lo que esperas conseguir.</li><li>Trabaja con la herramienta.</li><li>Graba tus dudas y errores, sin incluir información privada.</li><li>Anota los pasos que resuelven cada dificultad.</li><li>Consulta documentación oficial.</li><li>Pide una estructura de tutorial.</li><li>Comprueba cada procedimiento.</li><li>Haz que una persona principiante siga las instrucciones.</li><li>Corrige los puntos donde se atasque.</li></ol>
+    <p><strong>Criterio de éxito:</strong> que otra persona pueda completar la tarea sin necesitar tus explicaciones adicionales.</p>
+  </div></details>
+
+  <details><summary>Proyecto E. Un plan de vida basado en recursos</summary><div class="body">
+    <p><strong>Objetivo:</strong> estudiar la viabilidad de un modo de vida con gastos controlados y recursos bien aprovechados.</p>
+    <ol>
+      <li><strong>Define el sistema.</strong> Describe necesidades y restricciones reales: alojamiento, alimentación, energía, agua, conectividad, transporte, seguridad y acceso a servicios.</li>
+      <li><strong>Distingue necesidades de preferencias.</strong> Una necesidad básica no es lo mismo que una comodidad deseada. Ambas pueden ser importantes, pero deben identificarse por separado.</li>
+      <li><strong>Inventaría los recursos.</strong> Incluye recursos materiales, conocimientos, servicios públicos, conectividad, capacidades digitales y posibilidades de ingresos.</li>
+      <li><strong>Construye escenarios:</strong> conservador (solo recursos confirmados), optimizado (ahorros verificables) y experimental (oportunidades no validadas).</li>
+      <li><strong>Verifica.</strong> Comprueba cifras, disponibilidad, permisos, costes de mantenimiento y riesgos.</li>
+      <li><strong>Prueba antes de comprometerte.</strong> Siempre que sea posible, ensaya una parte del sistema antes de asumir gastos difíciles de revertir.</li>
+    </ol>
+    <p><strong>Criterio de éxito:</strong> disponer de un plan con cifras reales, incertidumbres visibles y decisiones reversibles cuando sea posible. La IA puede ayudar a organizarlo, pero no garantiza su viabilidad económica.</p>
+  </div></details>
+
+  <h2>14. Plan de práctica de 14 días</h2>
+  <p>El objetivo es aprender el método mediante sesiones cortas, no dominar todas las posibilidades de una vez.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Día</th><th>Ejercicio</th><th>Resultado</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Crear un cuaderno y grabar cinco minutos</td><td>Primera transcripción</td></tr>
+        <tr><td>2</td><td>Identificar ideas y preguntas</td><td>Lista inicial</td></tr>
+        <tr><td>3</td><td>Buscar supuestos no demostrados</td><td>Registro de hipótesis</td></tr>
+        <tr><td>4</td><td>Aplicar el abogado del diablo</td><td>Objeciones principales</td></tr>
+        <tr><td>5</td><td>Contrastar una afirmación con fuentes fiables</td><td>Nota de verificación</td></tr>
+        <tr><td>6</td><td>Convertir una idea en un experimento</td><td>Diseño de prueba</td></tr>
+        <tr><td>7</td><td>Realizar la prueba pequeña</td><td>Primer resultado</td></tr>
+        <tr><td>8</td><td>Grabar lo aprendido</td><td>Segunda reflexión</td></tr>
+        <tr><td>9</td><td>Explorar una conexión entre disciplinas</td><td>Mapa de conexiones</td></tr>
+        <tr><td>10</td><td>Identificar recursos de un entorno conocido</td><td>Inventario inicial</td></tr>
+        <tr><td>11</td><td>Diseñar una combinación de recursos</td><td>Tres propuestas</td></tr>
+        <tr><td>12</td><td>Investigar una pregunta científica o musical</td><td>Ficha de aprendizaje</td></tr>
+        <tr><td>13</td><td>Crear una mini guía a partir de una dificultad real</td><td>Tutorial breve</td></tr>
+        <tr><td>14</td><td>Revisar el conjunto</td><td>Informe de progreso y siguiente objetivo</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <h3>Revisión del día 14</h3>
+  <ol>
+    <li>¿Qué aprendí que antes no comprendía?</li>
+    <li>¿Qué hipótesis descarté?</li>
+    <li>¿Qué idea se convirtió en una acción real?</li>
+    <li>¿Qué clase de instrucciones produce mejores respuestas?</li>
+    <li>¿Qué errores comete con más frecuencia la IA en mis tareas?</li>
+    <li>¿Qué información debo verificar siempre?</li>
+    <li>¿Qué proceso quiero repetir durante el próximo mes?</li>
+  </ol>
+  <p>No midas el éxito por la cantidad de texto generado. Mídelo por la calidad de las preguntas, las pruebas realizadas y las decisiones mejor fundamentadas.</p>
+
+  <h2>15. Plantillas y prompts listos para copiar</h2>
+
+  <h3>Plantilla A. Registro de una grabación</h3>
+  <pre>TÍTULO:
+FECHA:
+TEMA:
+PREGUNTA PRINCIPAL:
+
+IDEAS EXPRESADAS:
+1.
+2.
+3.
+
+OBSERVACIONES DIRECTAS:
+
+HIPÓTESIS:
+
+PREGUNTAS PENDIENTES:
+
+DATOS QUE DEBO VERIFICAR:
+
+PRÓXIMA ACCIÓN:
+
+RESULTADO DE LA ACCIÓN:</pre>
+
+  <h3>Plantilla B. Analizador general de ideas</h3>
+  <pre>Actúa como analista crítico de ideas, investigador interdisciplinario y diseñador de experimentos.
+
+Analiza la transcripción de voz disponible en este cuaderno.
+
+No te limites a resumirla. Tu objetivo es descubrir qué ideas valiosas contiene y cómo convertirlas en conocimiento útil.
+
+Sigue estos pasos:
+
+1. IDEAS CENTRALES: identifica las ideas más importantes.
+2. IDEAS IMPLÍCITAS: detecta conexiones o implicaciones posibles.
+3. SUPUESTOS: enumera afirmaciones que todavía no tienen evidencia suficiente.
+4. CONTRADICCIONES: señala inconsistencias reales o posibles, sin inventarlas.
+5. PREGUNTAS: formula diez preguntas que merezcan investigación.
+6. OPORTUNIDADES: identifica aplicaciones prácticas posibles.
+7. VERIFICACIÓN: separa hechos respaldados, afirmaciones del hablante, hipótesis e ideas especulativas.
+8. EXPERIMENTOS: propone cinco pruebas concretas, preferiblemente de bajo coste.
+9. PRIORIDADES: selecciona las tres opciones más prometedoras y explica el criterio.
+10. SIGUIENTE PASO: recomienda una única acción concreta.
+
+No confundas originalidad con verdad. No presentes posibilidades como hechos. Si faltan datos, indícalo.</pre>
+
+  <h3>Plantilla C. Análisis de una oportunidad</h3>
+  <pre>Evalúa la oportunidad descrita en esta transcripción.
+
+Prepara una tabla con:
+- Descripción de la oportunidad.
+- Necesidad que podría resolver.
+- Recursos disponibles.
+- Recursos que faltan.
+- Evidencia de que existe demanda.
+- Costes conocidos.
+- Costes desconocidos.
+- Requisitos técnicos.
+- Permisos o cuestiones legales que deben comprobarse.
+- Riesgos.
+- Prueba de bajo coste.
+- Criterio para continuar o abandonar.
+
+Distingue datos confirmados de estimaciones e hipótesis.
+No inventes precios, permisos, demanda ni disponibilidad.
+Termina con la información que debería obtener antes de tomar una decisión.</pre>
+
+  <h3>Plantilla D. Tutor personal a partir de una reflexión</h3>
+  <pre>Utiliza la transcripción para ayudarme a aprender el tema que estoy intentando comprender.
+
+Primero, identifica lo que parece que entiendo y lo que todavía confundo.
+Después, explica los conceptos necesarios en lenguaje claro.
+Utiliza ejemplos concretos y señala los límites de cada analogía.
+Hazme cinco preguntas de comprobación, de dificultad creciente.
+No des por supuesto que comprendí una explicación solo porque la hayas presentado.
+Termina proponiendo un ejercicio práctico y una forma de evaluar mi respuesta.</pre>
+
+  <h3>Plantilla E. Seguimiento de un proyecto</h3>
+  <pre>Actualiza el estado de este proyecto utilizando las fuentes disponibles.
+
+Organiza el resultado en:
+1. Objetivo.
+2. Decisiones confirmadas.
+3. Hipótesis abiertas.
+4. Evidencia reunida.
+5. Resultados de experimentos.
+6. Riesgos y restricciones.
+7. Información que falta.
+8. Tareas pendientes.
+9. Próxima acción prioritaria.
+
+No inventes avances ni des por realizadas tareas que solo se propusieron.
+Indica la fuente de cada decisión importante cuando sea posible.</pre>
+
+  <h3>Plantilla F. Comprobador de afirmaciones</h3>
+  <pre>Revisa las afirmaciones importantes de esta transcripción.
+
+Para cada afirmación, indica:
+- Afirmación exacta.
+- Tipo: observación, hecho citado, hipótesis, opinión o especulación.
+- Fuente disponible.
+- Qué demuestra realmente la fuente.
+- Qué no demuestra.
+- Posibles explicaciones alternativas.
+- Verificación adicional necesaria.
+
+No inventes referencias. Si no hay evidencia suficiente, escribe claramente: "No verificado con las fuentes disponibles".</pre>
+
+  <h3>Plantilla G. De una idea a un plan de aprendizaje</h3>
+  <pre>Convierte la idea de aprendizaje descrita en esta grabación en un plan para principiantes.
+
+Incluye:
+1. Objetivo final.
+2. Conocimientos previos necesarios.
+3. Pasos en orden.
+4. Explicaciones sencillas.
+5. Ejercicios graduados.
+6. Errores frecuentes.
+7. Formas de comprobar el progreso.
+8. Fuentes fiables para consultar.
+9. Una tarea final práctica.
+
+No inventes funciones de software ni afirmes que un procedimiento funciona sin comprobarlo.</pre>
+</section>
+
+<!-- ====== 33 PREGUNTAS ====== -->
+<section class="tab" id="preguntas" data-t="33 Preguntas (Q&amp;A)">
+  <h2>33 preguntas y respuestas ordenadas por nivel de dificultad</h2>
+  <p>Las preguntas están agrupadas en cuatro niveles. Puedes utilizarlas para repasar el tutorial o comprobar si sabes aplicar el método.</p>
+
+  <h3>Nivel 1 — Principiante (1–8)</h3>
+
+  <details><summary>1. ¿Para qué sirve grabar mi voz en NotebookLM?</summary><div class="body">
+    <p>Para capturar una reflexión hablada y, cuando la función está disponible, convertirla en una fuente textual que puedas analizar junto con otros materiales del cuaderno. La utilidad no está solo en conservar lo que dices, sino en poder examinarlo y trabajar con ello.</p>
+  </div></details>
+
+  <details><summary>2. ¿Necesito hablar perfectamente?</summary><div class="body">
+    <p>No. Puedes hablar de manera natural. Lo importante es revisar la transcripción y corregir errores que alteren el significado, especialmente nombres propios, cifras, negaciones y términos técnicos.</p>
+  </div></details>
+
+  <details><summary>3. ¿Cuánto debería durar mi primera grabación?</summary><div class="body">
+    <p>Entre cinco y diez minutos es un buen punto de partida. Es tiempo suficiente para desarrollar una idea sin producir una transcripción excesivamente extensa.</p>
+  </div></details>
+
+  <details><summary>4. ¿Debo preparar un discurso antes de grabar?</summary><div class="body">
+    <p>No. Puedes preparar una pregunta principal y hablar espontáneamente. Si lees un texto completo, quizá obtengas una exposición más ordenada, pero perderás parte de la exploración libre que hace interesante este método.</p>
+  </div></details>
+
+  <details><summary>5. ¿Qué hago después de terminar la grabación?</summary><div class="body">
+    <p>Revisa la transcripción, comprueba que refleja lo que querías decir y solicita un análisis concreto: ideas principales, supuestos, preguntas pendientes y una acción posible.</p>
+  </div></details>
+
+  <details><summary>6. ¿Es mejor crear un cuaderno para cada tema?</summary><div class="body">
+    <p>Por lo general, sí. Separar música, ciencia, aprendizaje y proyectos prácticos facilita encontrar las fuentes y evita mezclar conversaciones que requieren métodos distintos.</p>
+  </div></details>
+
+  <details><summary>7. ¿NotebookLM sabe automáticamente si lo que digo es verdadero?</summary><div class="body">
+    <p>No. La transcripción refleja lo que se dijo, no su veracidad. Debes contrastar las afirmaciones con fuentes fiables y distinguir hechos, hipótesis y opiniones.</p>
+  </div></details>
+
+  <details><summary>8. ¿Qué hago si no aparece la función de grabación?</summary><div class="body">
+    <p>Consulta la ayuda oficial y comprueba la disponibilidad en tu cuenta y dispositivo. Mientras tanto, puedes utilizar otra herramienta para grabar y transcribir, e incorporar el texto como fuente si el formato es compatible.</p>
+  </div></details>
+
+  <h3>Nivel 2 — Intermedio (9–17)</h3>
+
+  <details><summary>9. ¿Cómo consigo que la IA no se limite a resumir?</summary><div class="body">
+    <p>Define una tarea específica. Pídele que encuentre supuestos, contradicciones, preguntas investigables o experimentos. Indica el formato de salida y qué debe evitar.</p>
+  </div></details>
+
+  <details><summary>10. ¿Qué diferencia hay entre una observación y una hipótesis?</summary><div class="body">
+    <p>Una observación describe algo que se ha percibido o registrado. Una hipótesis propone una explicación o posibilidad que necesita comprobación. Ver una parcela sin cultivar es una observación; afirmar que puede utilizarse para agricultura es una hipótesis hasta verificar su disponibilidad y las condiciones aplicables.</p>
+  </div></details>
+
+  <details><summary>11. ¿Qué es un supuesto no demostrado?</summary><div class="body">
+    <p>Es una afirmación que el razonamiento da por cierta sin aportar suficiente evidencia. Identificarlo ayuda a descubrir qué información falta para que una conclusión sea fiable.</p>
+  </div></details>
+
+  <details><summary>12. ¿Cómo utilizo la técnica del abogado del diablo?</summary><div class="body">
+    <p>Expón tu hipótesis, pide que identifique sus premisas y solicite las objeciones más fuertes. Después, investiga las objeciones y evalúa qué partes de tu idea siguen en pie. No se trata de llevar la contraria por deporte, sino de someter la idea a una prueba crítica.</p>
+  </div></details>
+
+  <details><summary>13. ¿Cómo puedo descubrir conexiones entre dos temas?</summary><div class="body">
+    <p>Graba qué semejanzas intuyes entre ambos, pide ejemplos concretos y solicita contraejemplos. Comprueba si la conexión es una analogía conceptual o una relación técnica o matemática real.</p>
+  </div></details>
+
+  <details><summary>14. ¿Qué debo hacer si la transcripción contiene una frase equivocada?</summary><div class="body">
+    <p>Corrige la frase antes de basar el análisis en ella. Si no puedes recuperar el sentido original, marca la parte como incierta. No dejes que la IA construya una conclusión sobre una transcripción que sabes que es incorrecta.</p>
+  </div></details>
+
+  <details><summary>15. ¿Cómo organizo las ideas que aparecen en muchas grabaciones?</summary><div class="body">
+    <p>Usa títulos con fecha y tema, registra las hipótesis en una tabla y mantén una nota con decisiones, resultados y tareas pendientes. No dependas exclusivamente de recordar en qué conversación apareció cada idea.</p>
+  </div></details>
+
+  <details><summary>16. ¿Cómo convierto una idea en un experimento?</summary><div class="body">
+    <p>Define qué quieres averiguar, formula una hipótesis, identifica los recursos necesarios, describe los pasos y determina qué resultado apoyaría o debilitaría la hipótesis. Realiza una prueba pequeña y registra lo que ocurrió.</p>
+  </div></details>
+
+  <details><summary>17. ¿Qué hago cuando la IA propone algo interesante pero no aporta pruebas?</summary><div class="body">
+    <p>Trátalo como una hipótesis. Pide qué evidencia sería necesaria, busca fuentes fiables y verifica las condiciones técnicas, legales o económicas pertinentes antes de actuar.</p>
+  </div></details>
+
+  <h3>Nivel 3 — Avanzado (18–25)</h3>
+
+  <details><summary>18. ¿Cómo puedo detectar ideas que no expresé explícitamente?</summary><div class="body">
+    <p>Pide que identifique posibles implicaciones y conexiones de la transcripción, pero exige que separe esas inferencias de las afirmaciones literales. Después, decide cuáles representan fielmente tu pensamiento y cuáles son propuestas nuevas de la IA.</p>
+  </div></details>
+
+  <details><summary>19. ¿Cómo evito que la IA confirme siempre mis creencias?</summary><div class="body">
+    <p>Solicita explicaciones alternativas, contraejemplos y pruebas que podrían refutar tu hipótesis. Busca también fuentes que discrepen de tu posición. La finalidad es evaluar la evidencia, no obtener una respuesta agradable.</p>
+  </div></details>
+
+  <details><summary>20. ¿Cómo evalúo una oportunidad económica surgida de una grabación?</summary><div class="body">
+    <p>Separa recursos disponibles, demanda demostrada, costes conocidos, costes desconocidos, requisitos y riesgos. Diseña una prueba pequeña para validar la demanda y comprueba las cifras con datos reales. No consideres una oportunidad validada solo porque la IA pueda describirla de forma convincente.</p>
+  </div></details>
+
+  <details><summary>21. ¿Cómo puedo aplicar este método a los recursos de un pueblo?</summary><div class="body">
+    <p>Graba observaciones, clasifica recursos físicos, humanos, públicos y digitales, y distingue lo que has visto de lo que supones. Añade fuentes oficiales y verifica disponibilidad, propiedad, permisos, costes y demanda. Después, estudia qué combinaciones podrían resolver una necesidad concreta.</p>
+  </div></details>
+
+  <details><summary>22. ¿Puedo utilizar NotebookLM para estudiar física y conciencia?</summary><div class="body">
+    <p>Sí, como apoyo para organizar preguntas, aclarar conceptos y contrastar argumentos. Debes utilizar fuentes fiables, separar las cuestiones empíricas de las filosóficas y no presentar como resueltos los problemas que siguen abiertos.</p>
+  </div></details>
+
+  <details><summary>23. ¿Cómo puedo usarlo para aprender armonía musical?</summary><div class="body">
+    <p>Graba una idea y aporta, cuando sea posible, los nombres de los acordes, las notas o una transcripción. Pide análisis de función armónica, conducción de voces y variaciones. Después, comprueba las propuestas al piano; la IA no puede identificar con certeza una progresión que no ha recibido de forma adecuada.</p>
+  </div></details>
+
+  <details><summary>24. ¿Cómo transformo mis dificultades de aprendizaje en un tutorial?</summary><div class="body">
+    <p>Registra las dudas reales, los errores y las soluciones que encuentres. Pide una estructura para principiantes, verifica cada paso con documentación fiable y prueba el tutorial con alguien que no conozca la herramienta. Corrige las instrucciones donde esa persona se atasque.</p>
+  </div></details>
+
+  <details><summary>25. ¿Cómo sé si un experimento ha funcionado?</summary><div class="body">
+    <p>Define el criterio de éxito antes de realizarlo. Compara el resultado observado con el resultado esperado, registra posibles factores que hayan influido y evita cambiar retrospectivamente el criterio solo para declarar que la prueba tuvo éxito.</p>
+  </div></details>
+
+  <h3>Nivel 4 — Experto y pensamiento crítico (26–33)</h3>
+
+  <details><summary>26. ¿Qué diferencia hay entre una conexión interesante y una explicación válida?</summary><div class="body">
+    <p>Una conexión interesante sugiere una semejanza o posibilidad. Una explicación válida necesita argumentos adecuados y, según el tema, evidencia empírica, demostración lógica o consistencia conceptual. La originalidad no sustituye a la validación.</p>
+  </div></details>
+
+  <details><summary>27. ¿Cómo puedo comparar hipótesis rivales?</summary><div class="body">
+    <p>Formula cada hipótesis con claridad, identifica qué predice y determina qué evidencia permitiría distinguirlas. Busca observaciones que favorezcan una frente a otra y considera si ambas podrían ser incorrectas o incompletas.</p>
+  </div></details>
+
+  <details><summary>28. ¿Cómo evito que un proyecto acumule ideas sin avanzar?</summary><div class="body">
+    <p>Establece un objetivo concreto, selecciona una prioridad por sesión y define la siguiente acción verificable. Mantén las demás ideas en una lista de espera. Revisa el proyecto a intervalos regulares y descarta o aplaza las opciones que no justifican el esfuerzo.</p>
+  </div></details>
+
+  <details><summary>29. ¿Qué debo hacer cuando las fuentes se contradicen?</summary><div class="body">
+    <p>Comprueba que hablan de la misma cuestión, fecha, población y condiciones. Evalúa su autoridad, método y evidencia. No elijas automáticamente la fuente que coincide con tu preferencia. Si la contradicción no puede resolverse, documenta la incertidumbre.</p>
+  </div></details>
+
+  <details><summary>30. ¿Cómo puedo medir si mi método de grabación está mejorando mi aprendizaje?</summary><div class="body">
+    <p>Define indicadores prácticos: preguntas mejor formuladas, errores corregidos, ejercicios completados, hipótesis comprobadas y decisiones respaldadas por evidencia. Compara tus resultados a lo largo del tiempo. La cantidad de transcripciones o palabras generadas no es una medida suficiente de aprendizaje.</p>
+  </div></details>
+
+  <details><summary>31. ¿Puede NotebookLM gestionar por sí solo un proyecto de principio a fin?</summary><div class="body">
+    <p>Puede ayudarte a organizar información, analizar fuentes y preparar planes, según las funciones disponibles. Pero no debes asumir que realiza automáticamente todas las acciones, conserva toda la historia o verifica cada resultado. Mantén un registro explícito y comprueba las tareas que requieren intervención humana.</p>
+  </div></details>
+
+  <details><summary>32. ¿Qué riesgos de privacidad debo considerar?</summary><div class="body">
+    <p>Una grabación puede incluir información personal propia o de terceros. Evita datos confidenciales innecesarios, solicita consentimiento cuando corresponda, revisa las condiciones del servicio y no publiques testimonios sin autorización adecuada. No supongas que borrar una fuente elimina todas las copias posibles.</p>
+  </div></details>
+
+  <details><summary>33. ¿Cuál es la idea más importante de todo el método?</summary><div class="body">
+    <p><strong>No confundas capturar una idea con desarrollarla.</strong> La grabación conserva una reflexión; el análisis descubre preguntas; las fuentes permiten contrastar afirmaciones; los experimentos generan evidencia; y el registro de resultados ayuda a decidir qué hacer después. El verdadero valor aparece cuando repites ese ciclo y aprendes de lo que ocurre.</p>
+  </div></details>
+</section>
+
+<!-- ====== ERRORES ====== -->
+<section class="tab" id="errores" data-t="Errores">
+  <h2>11. Cómo verificar los resultados y evitar errores</h2>
+  <p>La IA puede producir respuestas convincentes que contienen errores. Un procedimiento riguroso reduce ese riesgo.</p>
+
+  <h3>11.1. Pide que indique la base de cada afirmación</h3>
+  <p>Pregunta:</p>
+  <blockquote class="card">¿Qué parte de esta conclusión procede directamente de las fuentes, qué parte es una inferencia y qué parte es una hipótesis?</blockquote>
+
+  <h3>11.2. Verifica las afirmaciones decisivas</h3>
+  <p>No hace falta comprobar cada frase con la misma intensidad. Prioriza lo que pueda cambiar una decisión, afectar a la seguridad, implicar dinero o tener consecuencias legales.</p>
+
+  <h3>11.3. Consulta fuentes primarias</h3>
+  <p>Según el tema, busca: documentación oficial de una herramienta, legislación y organismos públicos, artículos científicos originales, manuales técnicos, datos publicados por instituciones responsables y mediciones directas y reproducibles. Una fuente primaria también puede contener errores o tener limitaciones, pero permite examinar la evidencia de origen.</p>
+
+  <h3>11.4. No confundas correlación y causalidad</h3>
+  <p>Que dos hechos aparezcan juntos no demuestra que uno cause el otro. Pide que la IA explique qué evidencia sería necesaria para sostener una relación causal.</p>
+
+  <h3>11.5. Busca activamente qué podría refutar tu idea</h3>
+  <p>Una hipótesis útil debe exponerse a la posibilidad de resultar falsa. Pregunta:</p>
+  <blockquote class="card">¿Qué observación o resultado me obligaría a modificar o abandonar esta hipótesis?</blockquote>
+
+  <h3>11.6. Comprueba cálculos y cifras</h3>
+  <p>Cuando una decisión dependa de cantidades, utiliza cálculos reproducibles y fuentes actualizadas. No aceptes una estimación de costes como un presupuesto real sin verificar precios, impuestos, mantenimiento y otros gastos.</p>
+
+  <h3>11.7. Evita el sesgo de confirmación</h3>
+  <p>No pidas únicamente argumentos que apoyen tu idea. Solicita también alternativas, contraejemplos y evidencia contraria.</p>
+
+  <h3>11.8. Reconoce los límites de la herramienta</h3>
+  <p>NotebookLM trabaja con las fuentes y capacidades disponibles en tu cuenta. No debe tratarse como una autoridad infalible ni como un sustituto de un profesional cuando una decisión requiera asesoramiento especializado.</p>
+
+  <h2>12. Privacidad, consentimiento y uso responsable</h2>
+  <p>Antes de grabar, considera qué información estás registrando y quién podría verse afectado.</p>
+  <ul>
+    <li>No grabes a otras personas sin considerar el consentimiento y las normas aplicables.</li>
+    <li>No incluyas contraseñas, claves privadas ni datos bancarios.</li>
+    <li>Evita registrar información confidencial de clientes, pacientes, compañeros o familiares.</li>
+    <li>Si trabajas con información de terceros, utiliza solo la necesaria.</li>
+    <li>Revisa las condiciones de privacidad del servicio y la configuración de tu cuenta.</li>
+    <li>No presupongas que borrar una transcripción elimina todas las copias o registros posibles.</li>
+    <li>Para entrevistas o testimonios, explica el propósito, el acceso previsto y si el material se publicará.</li>
+    <li>En contextos profesionales, cumple las obligaciones legales y las políticas de tu organización.</li>
+  </ul>
+  <p>La grabación de voz puede contener información personal aunque la transcripción parezca inocua. Una reflexión también puede revelar opiniones, hábitos, relaciones o circunstancias privadas.</p>
+
+  <h2>13. Problemas frecuentes y soluciones</h2>
+
+  <details><summary>Problema 1. La función de grabación no aparece</summary><div class="body">
+    <ol><li>Comprueba que estás en NotebookLM.</li><li>Consulta la ayuda oficial.</li><li>Revisa si la función está disponible en tu cuenta, país y dispositivo.</li><li>Prueba la versión web o la aplicación, según corresponda.</li><li>Utiliza una grabación y transcripción alternativas si lo necesitas.</li></ol>
+    <p>No asumas que todos los usuarios tienen la función al mismo tiempo.</p>
+  </div></details>
+
+  <details><summary>Problema 2. La transcripción contiene errores</summary><div class="body">
+    <ol><li>Revisa nombres propios y palabras técnicas.</li><li>Corrige negaciones, números y términos que cambien el sentido.</li><li>Divide una grabación demasiado larga en sesiones temáticas, si es posible.</li><li>Habla algo más despacio en futuras sesiones.</li><li>Graba en un lugar con menos ruido.</li></ol>
+  </div></details>
+
+  <details><summary>Problema 3. La respuesta es demasiado genérica</summary><div class="body">
+    <ol><li>Formula una pregunta concreta.</li><li>Indica qué resultado quieres.</li><li>Exige un formato.</li><li>Añade restricciones y criterios.</li><li>Pide que utilice las fuentes del cuaderno.</li><li>Solicita ejemplos específicos y una acción verificable.</li></ol>
+  </div></details>
+
+  <details><summary>Problema 4. La IA inventa conexiones</summary><div class="body">
+    <ol><li>Pide que identifique qué conexiones aparecen literalmente en la transcripción.</li><li>Separa las inferencias generadas por la IA.</li><li>Solicita la justificación de cada conexión.</li><li>Busca ejemplos y contraejemplos.</li><li>Descarta las que no aporten una explicación útil.</li></ol>
+  </div></details>
+
+  <details><summary>Problema 5. Mezcla hechos e hipótesis</summary><div class="body">
+    <p>Pide una tabla con columnas separadas para afirmación, tipo de afirmación, fuente, grado de incertidumbre y comprobación pendiente.</p>
+  </div></details>
+
+  <details><summary>Problema 6. Se pierde el hilo entre varias sesiones</summary><div class="body">
+    <p>Mantén una fuente de estado del proyecto con: objetivo actual, decisiones tomadas, hipótesis abiertas, resultados obtenidos y próximos pasos. Actualízala después de cada sesión importante.</p>
+  </div></details>
+
+  <details><summary>Problema 7. Hay demasiadas ideas y ninguna se ejecuta</summary><div class="body">
+    <p>Limita cada sesión a una acción principal. Establece un criterio para decidir qué idea se investiga primero. Archivar una idea no significa descartarla para siempre.</p>
+  </div></details>
+
+  <details><summary>Problema 8. La propuesta parece brillante, pero no es viable</summary><div class="body">
+    <p>Pide que identifique requisitos técnicos, costes, permisos, dependencias y posibles obstáculos. Después, comprueba los elementos críticos antes de invertir tiempo o dinero.</p>
+  </div></details>
+</section>
+
+<!-- ====== RESUMEN ====== -->
+<section class="tab" id="resumen" data-t="Resumen">
+  <h2>Conclusión</h2>
+  <p>La grabación de voz de NotebookLM puede ser mucho más que una forma cómoda de tomar notas. Puede convertirse en una herramienta para explorar ideas, ordenar preguntas, poner a prueba hipótesis y desarrollar proyectos.</p>
+  <p>La clave no es hablar más ni generar más documentos. Es aprender a transformar una reflexión espontánea en una secuencia de pasos verificables.</p>
+  <div class="callout">
+    Empieza con una pregunta. Graba cinco minutos. Revisa la transcripción. Identifica una hipótesis. Busca una fuente fiable. Realiza una prueba pequeña. Registra lo que aprendiste. Después, repite el proceso.
+  </div>
+  <p><strong>Una idea puede desaparecer en unos minutos. Una idea examinada, contrastada y puesta a prueba puede convertirse en conocimiento útil.</strong></p>
+
+  <h2>Ideas clave para recordar</h2>
+  <ul>
+    <li>La grabación es el punto de partida, no el resultado final.</li>
+    <li>Distingue hecho, observación, hipótesis, posibilidad y preferencia.</li>
+    <li>Revisa siempre la transcripción: nombres propios, cifras, negaciones y términos técnicos.</li>
+    <li>Pide a la IA que separe lo que has dicho de sus inferencias.</li>
+    <li>Contrasta las afirmaciones decisivas con fuentes fiables.</li>
+    <li>Convierte la idea más prometedora en una prueba pequeña y reversible.</li>
+    <li>Registra resultados, decisiones e incertidumbres de forma explícita.</li>
+    <li>No confundas originalidad con verdad ni fluidez con evidencia.</li>
+  </ul>
+
+  <h2>Lista de comprobación final</h2>
+  <div class="card checklist" id="finalChecklist">
+    <label><input type="checkbox" data-ck="c1"> He creado un cuaderno por tema y definido su propósito.</label>
+    <label><input type="checkbox" data-ck="c2"> He revisado la transcripción y corregido nombres, cifras y negaciones.</label>
+    <label><input type="checkbox" data-ck="c3"> He identificado ideas principales, supuestos y preguntas pendientes.</label>
+    <label><input type="checkbox" data-ck="c4"> He separado hechos, hipótesis, inferencias y opiniones.</label>
+    <label><input type="checkbox" data-ck="c5"> He contrastado al menos una afirmación con una fuente fiable.</label>
+    <label><input type="checkbox" data-ck="c6"> He definido un criterio de éxito antes de experimentar.</label>
+    <label><input type="checkbox" data-ck="c7"> He registrado el resultado y el siguiente paso.</label>
+    <label><input type="checkbox" data-ck="c8"> He revisado privacidad y consentimiento antes de grabar.</label>
+  </div>
+</section>
+
+<!-- ====== FUENTES ====== -->
+<section class="tab" id="fuentes" data-t="Fuentes">
+  <h2>Recursos oficiales</h2>
+  <ul>
+    <li>NotebookLM: <a href="https://notebooklm.google.com/" target="_blank" rel="noopener">https://notebooklm.google.com/</a></li>
+    <li>Centro de ayuda de NotebookLM: <a href="https://support.google.com/notebooklm/" target="_blank" rel="noopener">https://support.google.com/notebooklm/</a></li>
+  </ul>
+  <div class="callout warn">
+    <strong>Nota de actualización:</strong> las funciones, la interfaz, los límites de grabación y las opciones de importación pueden cambiar. Comprueba la documentación oficial para conocer el funcionamiento vigente de tu cuenta.
+  </div>
+  <h2>Fuente principal de este tutorial</h2>
+  <p>Este tutorial se ha elaborado a partir del documento <em>«NotebookLM como laboratorio de ideas — Tutorial completo para grabar la voz, descubrir conexiones y convertir reflexiones en conocimiento útil»</em> de Rubén Sbarsky. La organización pedagógica, los ejemplos, los prompts, las plantillas y las preguntas de repaso se han mantenido fieles al contenido original.</p>
+  <p>Las comprobaciones de interfaz, disponibilidad de funciones y límites de la herramienta deben verificarse en la documentación oficial, ya que pueden variar según cuenta, país y dispositivo.</p>
+</section>
+
+<!-- ====== CRÉDITOS ====== -->
+<section class="tab" id="creditos" data-t="Créditos">
+  <h2>Créditos</h2>
+  <div class="hero-svg-wrap" id="svgCred" style="margin:0 auto 18px"></div>
+  <p><strong>Ilustración animada:</strong> micrófono central que emite ondas de voz y las transforma en tarjetas de ideas conectadas por una red luminosa. Representa el paso de la reflexión hablada al conocimiento organizado: la voz se captura, se transcribe, se analiza y se conecta con otras ideas.</p>
+  <p style="font-size:clamp(1.8rem,5vw,2.6rem);font-weight:800;color:var(--accent);line-height:1.1;margin:18px 0 4px">Rubén Sbarsky</p>
+  <p style="font-size:1.05rem;color:var(--muted);margin-top:0">Autor del tutorial</p>
+  <p>Este material forma parte de una serie de tutoriales prácticos sobre herramientas de inteligencia artificial aplicadas al aprendizaje, la investigación y la creación. El objetivo es que cualquier persona, sin conocimientos técnicos previos, pueda convertir una idea hablada en un proceso verificable de aprendizaje.</p>
+  <p><strong>Versión:</strong> V001</p>
+  <p><strong>Fecha y hora de creación:</strong> 28/10/2026 — 21:45:05</p>
+  <p><strong>Archivo:</strong> tutorial_notebooklm_laboratorio_de_ideas_V001.html</p>
+  <div class="callout">
+    <strong>Limitaciones de verificación:</strong> la interfaz de NotebookLM y la disponibilidad de la función de grabación de voz pueden variar según cuenta, país y dispositivo. Este tutorial describe el método y el flujo de trabajo, no garantiza que todos los botones estén presentes en todas las versiones. Consulta siempre la ayuda oficial para conocer el estado actual de la herramienta.
+  </div>
+</section>
+
+</main>
+
+<!-- BOTÓN VOLVER ARRIBA -->
+<button id="backtop" aria-label="Volver arriba">↑</button>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ SVG TEMPLATE ============ */
+  var svgSrc = document.getElementById('svgSource');
+  var tpl = document.getElementById('svgTemplate').outerHTML;
+  if(svgSrc) svgSrc.remove();
+
+  function mount(id){
+    var el = document.getElementById(id);
+    if(!el || el.firstChild) return;
+    el.innerHTML = tpl.replace(/__UID__/g, id);
+    if(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){
+      el.querySelectorAll('animateMotion, animate, animateTransform').forEach(function(a){ a.remove(); });
+    }
+  }
+
+  /* ============ SECCIONES ============ */
+  var secs = Array.prototype.slice.call(document.querySelectorAll('#main .tab'));
+  var chips = Array.prototype.slice.call(document.querySelectorAll('#chips .chip'));
+  var dr = document.getElementById('dr');
+  var mb = document.getElementById('mb');
+  var current = 0;
+
+  /* Generar entradas del índice */
+  secs.forEach(function(s,i){
+    var a = document.createElement('a');
+    a.href = '#';
+    a.setAttribute('role','button');
+    var title = s.dataset.t || (s.querySelector('h2') ? s.querySelector('h2').textContent : 'Sección '+(i+1));
+    a.textContent = (i ? i + '. ' : '') + title;
+    a.addEventListener('click', function(ev){
+      ev.preventDefault();
+      go(i);
+      tg(false);
+    });
+    dr.appendChild(a);
+  });
+
+  function tg(v){
+    dr.classList.toggle('o', v);
+    mb.setAttribute('aria-expanded', dr.classList.contains('o') ? 'true' : 'false');
+  }
+
+  function go(i){
+    if(i < 0 || i >= secs.length) return;
+    current = i;
+    secs.forEach(function(s,j){ s.classList.toggle('active', j === i); });
+    chips.forEach(function(b,j){ b.classList.toggle('on', j === i); });
+    Array.prototype.forEach.call(dr.children, function(a,j){ a.classList.toggle('on', j === i); });
+    if(i === 0) mount('svgHome');
+    if(i === secs.length - 1) mount('svgCred');
+    window.scrollTo({top:0, behavior:'smooth'});
+    if(history.replaceState) history.replaceState(null, '', '#' + secs[i].id);
+  }
+
+  chips.forEach(function(b){
+    b.addEventListener('click', function(){ go(parseInt(b.dataset.go,10) || 0); });
+  });
+
+  mb.addEventListener('click', function(){ tg(!dr.classList.contains('o')); });
+
+  var ix = document.getElementById('ix');
+  if(ix) ix.addEventListener('click', function(){ tg(true); });
+
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') tg(false);
+  });
+  document.addEventListener('click', function(e){
+    if(!e.target.closest('#dr,#mb')) tg(false);
+  });
+
+  /* Hash inicial */
+  function initFromHash(){
+    var h = (location.hash || '').replace('#','');
+    var idx = 0;
+    if(h){
+      for(var k=0;k<secs.length;k++){
+        if(secs[k].id === h){ idx = k; break; }
+      }
+    }
+    go(idx);
+  }
+
+  /* ============ PROGRESO DE LECTURA ============ */
+  var pf = document.getElementById('progressFill');
+  function updateProgress(){
+    var h = document.documentElement;
+    var max = h.scrollHeight - h.clientHeight;
+    var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+    pf.style.width = pct + '%';
+    var bt = document.getElementById('backtop');
+    if(h.scrollTop > 400) bt.classList.add('o'); else bt.classList.remove('o');
+  }
+  window.addEventListener('scroll', updateProgress, {passive:true});
+  window.addEventListener('resize', updateProgress);
+
+  /* ============ BACK TO TOP ============ */
+  document.getElementById('backtop').addEventListener('click', function(){
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+
+  /* ============ TAMAÑO DE LETRA ============ */
+  var fs = parseInt(localStorage.getItem('nb_fs') || '16', 10);
+  if(isNaN(fs) || fs < 13 || fs > 22) fs = 16;
+  function applyFs(){ document.documentElement.style.setProperty('--fs', fs + 'px'); }
+  applyFs();
+  document.getElementById('fontDec').addEventListener('click', function(){
+    if(fs > 13){ fs--; applyFs(); try{localStorage.setItem('nb_fs', fs);}catch(e){} }
+  });
+  document.getElementById('fontInc').addEventListener('click', function(){
+    if(fs < 22){ fs++; applyFs(); try{localStorage.setItem('nb_fs', fs);}catch(e){} }
+  });
+
+  /* ============ TEMA ============ */
+  var theme = localStorage.getItem('nb_theme') || 'dark';
+  function applyTheme(){
+    document.body.classList.toggle('light', theme === 'light');
+    document.getElementById('themeBtn').textContent = theme === 'light' ? '☀️' : '🌙';
+  }
+  applyTheme();
+  document.getElementById('themeBtn').addEventListener('click', function(){
+    theme = theme === 'light' ? 'dark' : 'light';
+    applyTheme();
+    try{ localStorage.setItem('nb_theme', theme); }catch(e){}
+  });
+
+  /* ============ COPIAR ============ */
+  function enhanceCopy(){
+    Array.prototype.forEach.call(document.querySelectorAll('pre'), function(pre){
+      if(pre.parentElement && pre.parentElement.classList.contains('copy-wrap')) return;
+      var wrap = document.createElement('div');
+      wrap.className = 'copy-wrap';
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+      var btn = document.createElement('button');
+      btn.className = 'copy-btn';
+      btn.type = 'button';
+      btn.textContent = 'COPIAR';
+      btn.addEventListener('click', function(){
+        var text = pre.textContent;
+        function ok(){ btn.textContent = '✓ COPIADO'; setTimeout(function(){ btn.textContent = 'COPIAR'; }, 1500); }
+        function fail(){ btn.textContent = 'ERROR'; setTimeout(function(){ btn.textContent = 'COPIAR'; }, 1500); }
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(text).then(ok).catch(function(){ fallback(text, ok, fail); });
+        } else {
+          fallback(text, ok, fail);
+        }
+      });
+      wrap.appendChild(btn);
+    });
+  }
+  function fallback(text, ok, fail){
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly','');
+      ta.style.position = 'fixed';
+      ta.style.top = '-1000px';
+      document.body.appendChild(ta);
+      ta.select();
+      var done = document.execCommand('copy');
+      document.body.removeChild(ta);
+      if(done) ok(); else fail();
+    }catch(e){ fail(); }
+  }
+  enhanceCopy();
+
+  /* ============ CHECKLIST PERSISTENTE ============ */
+  Array.prototype.forEach.call(document.querySelectorAll('#finalChecklist input[type="checkbox"]'), function(ck){
+    var key = 'nb_ck_' + ck.dataset.ck;
+    try{ if(localStorage.getItem(key) === '1') ck.checked = true; }catch(e){}
+    ck.addEventListener('change', function(){
+      try{ localStorage.setItem(key, ck.checked ? '1' : '0'); }catch(e){}
+    });
+  });
+
+  /* ============ BUSCADOR ============ */
+  var sp = document.getElementById('searchPanel');
+  var si = document.getElementById('searchInput');
+  var sr = document.getElementById('searchResults');
+
+  function openSearch(){
+    sp.classList.add('o');
+    setTimeout(function(){ si.focus(); }, 30);
+    renderResults(si.value);
+  }
+  function closeSearch(){ sp.classList.remove('o'); }
+
+  document.getElementById('searchBtn').addEventListener('click', openSearch);
+  document.getElementById('searchClose').addEventListener('click', closeSearch);
+  sp.addEventListener('click', function(e){ if(e.target === sp) closeSearch(); });
+
+  function norm(s){ return (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+  function renderResults(q){
+    var ql = norm(q).trim();
+    sr.innerHTML = '';
+    if(!ql){
+      var p = document.createElement('div');
+      p.className = 'empty';
+      p.textContent = 'Escribe para buscar en todas las secciones.';
+      sr.appendChild(p);
+      return;
+    }
+    var found = 0;
+    secs.forEach(function(s,i){
+      var title = s.dataset.t || (s.querySelector('h2') ? s.querySelector('h2').textContent : '');
+      var full = s.textContent || '';
+      var haystack = norm(full);
+      var pos = haystack.indexOf(ql);
+      if(pos === -1) return;
+      found++;
+      // snippet
+      var raw = full;
+      // find approximate position in original text (rough)
+      var idxOrig = Math.max(0, Math.min(raw.length - 1, pos));
+      var start = Math.max(0, idxOrig - 40);
+      var end = Math.min(raw.length, idxOrig + 80);
+      var snip = raw.slice(start, end).replace(/\s+/g,' ').trim();
+      if(start > 0) snip = '…' + snip;
+      if(end < raw.length) snip = snip + '…';
+
+      var a = document.createElement('a');
+      a.href = '#';
+      var t = document.createElement('div'); t.className = 'sr-title'; t.textContent = title;
+      var sn = document.createElement('div'); sn.className = 'sr-snip'; sn.textContent = snip;
+      a.appendChild(t); a.appendChild(sn);
+      a.addEventListener('click', function(ev){
+        ev.preventDefault();
+        go(i);
+        closeSearch();
+        // intentar desplazar a la coincidencia
+        var el = findTextElement(s, ql);
+        if(el && el.scrollIntoView) setTimeout(function(){ el.scrollIntoView({behavior:'smooth',block:'center'}); }, 250);
+      });
+      sr.appendChild(a);
+    });
+    if(!found){
+      var e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = 'Sin resultados para «' + q + '».';
+      sr.appendChild(e);
+    }
+  }
+
+  function findTextElement(root, ql){
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var n;
+    while((n = walker.nextNode())){
+      if(n.nodeValue && norm(n.nodeValue).indexOf(ql) !== -1){
+        return n.parentElement;
+      }
+    }
+    return null;
+  }
+
+  si.addEventListener('input', function(){ renderResults(si.value); });
+  si.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeSearch(); });
+
+  /* ============ IMPRESIÓN ============ */
+  function preparePrint(){
+    mount('svgHome');
+    mount('svgCred');
+    Array.prototype.forEach.call(document.querySelectorAll('details'), function(d){
+      if(!d.open){ d.dataset.wasClosed = '1'; d.open = true; }
+    });
+  }
+  function restorePrint(){
+    Array.prototype.forEach.call(document.querySelectorAll('details[data-was-closed]'), function(d){
+      d.open = false;
+      delete d.dataset.wasClosed;
+    });
+  }
+  window.addEventListener('beforeprint', preparePrint);
+  window.addEventListener('afterprint', restorePrint);
+
+  document.getElementById('printBtn').addEventListener('click', function(){
+    preparePrint();
+    try{
+      window.print();
+    }catch(e){
+      alert('Abre este archivo directamente en el navegador y utiliza Ctrl+P o Cmd+P.');
+    }
+    setTimeout(restorePrint, 800);
+  });
+
+  /* ============ REPARACIÓN PERIÓDICA SVG ============ */
+  setInterval(function(){
+    var home = document.getElementById('svgHome');
+    if(home && home.offsetParent !== null && !home.firstChild) mount('svgHome');
+    var cred = document.getElementById('svgCred');
+    if(cred && cred.offsetParent !== null && !cred.firstChild) mount('svgCred');
+  }, 2000);
+
+  /* ============ INICIO ============ */
+  initFromHash();
+  updateProgress();
+  // Montar SVG inicial si la sección activa lo requiere
+  setTimeout(function(){
+    if(current === 0) mount('svgHome');
+    if(current === secs.length - 1) mount('svgCred');
+  }, 50);
+
+})();
+</script>
+</body>
+</html>
